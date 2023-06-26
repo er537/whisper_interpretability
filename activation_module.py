@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 import torch
 import whisper
 
-from dataset import LibriSpeech
-from utils import device
+from dataset import ClasswiseDataset
 
 
 class BaseActivationModule(ABC):
@@ -31,7 +30,8 @@ class BaseActivationModule(ABC):
 
     def _get_hook(self, name):
         def hook(module, input, output):
-            output_ = output[0].detach().cpu()
+            print("in hook", output.shape)
+            output_ = output.detach().cpu()
             input_ = input[0].detach().cpu()
             with torch.no_grad():
                 self.activations[f"{name}.input"] = input_
@@ -57,10 +57,11 @@ class WhipserActivationModule(BaseActivationModule):
         self,
         model_name: str = "tiny.en",
         language: str = "en",
+        data_class: str = "NON_SPEECH",
         activations_to_cache: list = [],
     ):
         self.model = whisper.load_model(model_name)
-        self.loader = self._get_dataloader()
+        self.loader = self._get_dataloader(data_class)
         self.language = language
         self.activations_to_cache = (
             activations_to_cache if len(activations_to_cache) > 0 else "all"
@@ -68,17 +69,15 @@ class WhipserActivationModule(BaseActivationModule):
         self.named_modules = {name: mod for name, mod in self.model.named_modules()}
         super().__init__(self.model, self.activations_to_cache)
 
-    def _get_dataloader(self):
-        dataset = LibriSpeech("test-clean")
-        return iter(torch.utils.data.DataLoader(dataset, batch_size=1))
+    def _get_dataloader(self, data_class):
+        dataset = ClasswiseDataset(class_labels=[data_class], pad=True)
+        return iter(torch.utils.data.DataLoader(dataset, batch_size=10))
 
     def custom_forward(self, model: torch.nn.Module) -> dict:
         options = whisper.DecodingOptions(
             language=self.language, without_timestamps=False, fp16=False
         )
-        audio, sample_rate, texts, num_frames = next(self.loader)
-        assert sample_rate == 16000
-        audio = whisper.pad_or_trim(audio.flatten()).to(device)
-        mels = whisper.log_mel_spectrogram(audio)
+        mels, labels = next(self.loader)
+        print(mels.shape, labels)
         results = model.decode(mels, options)
-        return results, texts
+        return results, labels

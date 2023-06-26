@@ -3,6 +3,7 @@ import torch
 import os
 import numpy as np
 from collections import defaultdict
+import whisper
 
 from utils import device, load_audio, trim_audio
 
@@ -28,40 +29,68 @@ class LibriSpeech(torch.utils.data.Dataset):
 
 
 class ClasswiseDataset(torch.utils.data.IterableDataset):
-    def __init__(self, audio_samples_per_class=1000, dblx_path='/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx', batch_size=10):
+    def __init__(
+        self,
+        audio_samples_per_class=60,
+        dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
+        samples_per_batch=30,
+        class_labels=["SPEECH"],
+        pad=True,  ## pad/trim for Whisper
+    ):
         super().__init__()
-        self.build_dataset(dblx_path, audio_samples_per_class)
-        self.data = defaultdict(list)
-        self.build_dataset()
+        self.data = {class_label: torch.empty(0) for class_label in class_labels}
         self.max_frames_per_input = 48_0000
         self.audio_samples_per_class = audio_samples_per_class
-        self.batch_size = batch_size
-        
-    def build_dataset(self, dblx_path, audio_samples_per_class):
+        self.samples_per_batch = samples_per_batch
+        self.pad = pad
+        self.build_dataset(dblx_path, audio_samples_per_class, class_labels)
+
+    def build_dataset(self, dblx_path, audio_samples_per_class, class_labels):
         """
         Fill self.samples with audio_samples_per_class
         """
         # TODO: this is kinda inefficient as we parse every audio file even if that class if already 'full'
-        with open(dblx_path, 'r') as f:
+        with open(dblx_path, "r") as f:
+            completed = False
             while not completed:
                 line = f.readline()
-                _, audio_path, start_time, end_time, label = line.split(' ')
-                if self.data[label].shape[0] > audio_samples_per_class:
+                _, audio_path, start_time, end_time, label = line.split(" ")
+                label = label.strip("\n")
+
+                if label not in class_labels:
                     continue
+
+                if self.data[label].shape[0] > audio_samples_per_class:
+                    # this class already full, continue until all other classes are full
+                    continue
+
                 audio = load_audio(audio_path)
                 trimmed_audio = trim_audio(audio, float(start_time), float(end_time))
-                self.data[label] = np.concatenate((self.data[label], trimmed_audio), axis=0)
-                completed = all(frames.shape[0] > audio_samples_per_class for frames in self.data.keys())
-    
+
+                if self.data[label].shape[0] == 0:
+                    self.data[label] = trimmed_audio
+                else:
+                    self.data[label] = np.concatenate(
+                        (self.data[label], trimmed_audio), axis=0
+                    )
+
+                completed = all(
+                    frames.shape[0] > audio_samples_per_class
+                    for frames in self.data.values()
+                )
+        for label in self.data.keys():
+            self.data[label] = self.data[label][: self.audio_samples_per_class]
+            print(f"Class label:{label}, Number of Samples:{self.data[label].shape[0]}")
+
     def __iter__(self):
-        # TODO: drop last?
-        for label, samples in self.data.keys():
+        for label, samples in self.data.items():
             samples_yielded = 0
             while samples_yielded < self.audio_samples_per_class:
-                audio_batch = []
-                for _ in range(self.batch_size):
-                    audio_batch.append(samples[samples_yielded:samples_yielded+self.audio_samples_per_class])
-                    samples_yielded += self.audio_samples_per_class
-                
-                yield np.stack(audio_batch, dim=0), label.repeat(self.batch_size)
-        
+                audio = samples[
+                    samples_yielded : samples_yielded + self.samples_per_batch
+                ]
+                if self.pad:
+                    audio = whisper.pad_or_trim(audio.flatten())
+                mels = whisper.log_mel_spectrogram(audio)
+                yield mels, label
+                samples_yielded += self.samples_per_batch
