@@ -30,14 +30,24 @@ class BaseActivationModule(ABC):
 
     def _get_hook(self, name):
         def hook(module, input, output):
-            print("in hook", output.shape)
             output_ = output.detach().cpu()
             input_ = input[0].detach().cpu()
             with torch.no_grad():
-                self.activations[f"{name}.input"] = input_
-                self.activations[f"{name}.output"] = output_
+                if f"{name}.input" in self.activations:
+                    self.activations[f"{name}.input"] = torch.cat(
+                        (self.activations[f"{name}.input"], input_), dim=0
+                    )
+                    self.activations[f"{name}.output"] = torch.cat(
+                        (self.activations[f"{name}.output"], output_), dim=0
+                    )
+                else:
+                    self.activations[f"{name}.input"] = input_
+                    self.activations[f"{name}.output"] = output_
 
         return hook
+
+    def cluser_activations(self, name):
+        raise NotImplementedError
 
     def remove_hooks(self):
         for hook in self.hooks:
@@ -77,7 +87,6 @@ class WhipserActivationModule(BaseActivationModule):
         options = whisper.DecodingOptions(
             language=self.language, without_timestamps=False, fp16=False
         )
-        mels, labels = next(self.loader)
-        print(mels.shape, labels)
-        results = model.decode(mels, options)
-        return results, labels
+        for mels, labels in self.loader:
+            print(f"Decoding:{mels.shape}")
+            model.decode(mels, options)

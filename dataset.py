@@ -7,11 +7,13 @@ import whisper
 
 from utils import device, load_audio, trim_audio
 
+
 class LibriSpeech(torch.utils.data.Dataset):
     """
     A simple class to wrap LibriSpeech and trim/pad the audio to 30 seconds.
     It will drop the last few seconds of a very small portion of the utterances.
     """
+
     def __init__(self, split="test-clean", device=device):
         self.dataset = torchaudio.datasets.LIBRISPEECH(
             root=os.path.expanduser("~/.cache"),
@@ -31,7 +33,7 @@ class LibriSpeech(torch.utils.data.Dataset):
 class ClasswiseDataset(torch.utils.data.IterableDataset):
     def __init__(
         self,
-        audio_samples_per_class=60,
+        audio_samples_per_class=3000,
         dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
         samples_per_batch=30,
         class_labels=["SPEECH"],
@@ -91,6 +93,6 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
                 ]
                 if self.pad:
                     audio = whisper.pad_or_trim(audio.flatten())
-                mels = whisper.log_mel_spectrogram(audio)
+                mels = torch.tensor(whisper.log_mel_spectrogram(audio)).to(device)
                 yield mels, label
                 samples_yielded += self.samples_per_batch
