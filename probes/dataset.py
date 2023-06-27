@@ -68,9 +68,14 @@ class VADDataset(torch.utils.data.IterableDataset):
             for label in self.class_labels:
                 if len(self.datasets[label]) > 0:
                     audio = self.datasets[label].pop(0)
+                    num_non_padded_frames = len(audio) // 160
                     mels = self._get_mels(audio)
                     labels = torch.tensor(self.class_labels.index(label)).repeat(
-                        mels.shape[1]
+                        num_non_padded_frames
+                    )
+                    pad_frames = mels.shape[1] - num_non_padded_frames
+                    labels = torch.nn.functional.pad(
+                        labels, (0, pad_frames), "constant", -1
                     )
                     yield mels, labels
                 else:
