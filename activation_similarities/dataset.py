@@ -33,17 +33,15 @@ class LibriSpeech(torch.utils.data.Dataset):
 class ClasswiseDataset(torch.utils.data.IterableDataset):
     def __init__(
         self,
-        audio_samples_per_class=3000,
+        audio_samples_per_class=48_0000,
         dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
-        samples_per_batch=30,
         class_labels=["SPEECH"],
         pad=True,  ## pad/trim for Whisper
     ):
         super().__init__()
         self.data = {class_label: torch.empty(0) for class_label in class_labels}
-        self.max_frames_per_input = 48_0000
         self.audio_samples_per_class = audio_samples_per_class
-        self.samples_per_batch = samples_per_batch
+        self.samples_per_batch = 48_0000  # default window size used by Whisper
         self.pad = pad
         self.build_dataset(dblx_path, audio_samples_per_class, class_labels)
 
@@ -94,5 +92,6 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
                 if self.pad:
                     audio = whisper.pad_or_trim(audio.flatten())
                 mels = torch.tensor(whisper.log_mel_spectrogram(audio)).to(device)
+
                 yield mels, label
                 samples_yielded += self.samples_per_batch
