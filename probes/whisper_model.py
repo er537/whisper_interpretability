@@ -8,7 +8,7 @@ class WhipserActivationCache(BaseActivationModule):
     def __init__(
         self,
         dataloader: torch.utils.data.dataloader,
-        model_name: str = "base",
+        model_name: str = "tiny",
         activations_to_cache: list = ["encoder.blocks.0"],
     ):
         self.model = whisper.load_model(model_name)
