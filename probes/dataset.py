@@ -57,7 +57,7 @@ class VADDataset(torch.utils.data.IterableDataset):
                 audio = self.datasets[label].pop(0)
                 mels = self._get_mels(audio)
                 labels = torch.tensor(self.class_labels.index(label)).repeat(
-                    mels.shape[0]
+                    mels.shape[1]
                 )
                 yield mels, labels
                 chosen_dataclass = random.sample(self.class_labels, 1)[0]  # new class
@@ -70,7 +70,7 @@ class VADDataset(torch.utils.data.IterableDataset):
                     audio = self.datasets[label].pop(0)
                     mels = self._get_mels(audio)
                     labels = torch.tensor(self.class_labels.index(label)).repeat(
-                        mels.shape[0]
+                        mels.shape[1]
                     )
                     yield mels, labels
                 else:
