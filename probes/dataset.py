@@ -9,8 +9,8 @@ from utils import device, load_audio, trim_audio
 class VADDataset(torch.utils.data.IterableDataset):
     def __init__(
         self,
-        dblx_path="/home/ellenar/testing_vad.dblx",
-        class_labels=["SPEECH", "NON_SPEECH"],
+        dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
+        class_labels=["NON_SPEECH", "SPEECH"],
         pad=True,  ## pad/trim for Whisper
         max_audio_samples=math.inf,
         samples_per_batch=480_000,
