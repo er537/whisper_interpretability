@@ -194,32 +194,35 @@ def train(FLAGS, global_rank=0):
 
         # Forward pass
         forward_time = 0
-        with autocast():
-            start_time = perf_counter()
-            train_whisper_model.forward()
-            input = train_whisper_model.activations[f"{FLAGS.probe_layer}.output"].to(
-                device
-            )
-            train_whisper_model.reset_state()
-            pred = model(input)
-            pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
-            labels = downsample_labels(labels, pred)
-            forward_time += perf_counter() - start_time
-            loss = loss_fn(pred, labels)
-            meta.snapshot_memory_usage("mem_fwd")
+        losses = []
+        for _ in range(FLAGS.grad_acc_steps):
+            with autocast():
+                start_time = perf_counter()
+                train_whisper_model.forward()
+                input = train_whisper_model.activations[
+                    f"{FLAGS.probe_layer}.output"
+                ].to(device)
+                train_whisper_model.reset_state()
+                pred = model(input)
+                pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
+                labels = downsample_labels(labels, pred)
+                forward_time += perf_counter() - start_time
+                loss = loss_fn(pred, labels)
+                losses.append(loss.item())
+                meta.snapshot_memory_usage("mem_fwd")
 
-        # Backward pass
-        backward_time = 0
-        start_time = perf_counter()
-        loss.backward()
-        backward_time += perf_counter() - start_time
+            # Backward pass
+            backward_time = 0
+            start_time = perf_counter()
+            loss.backward()
+            backward_time += perf_counter() - start_time
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.clip_thresh)
         optimizer.step()
         scheduler.step()
         model.zero_grad()
         state["step"] += 1
-        meta["loss"] = loss.item()
+        meta["loss"] = sum(losses) / FLAGS.grad_acc_steps
         meta["time_forward"] = forward_time
         meta["time_backward"] = backward_time
 
