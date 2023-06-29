@@ -51,7 +51,11 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
-flags.DEFINE_integer("val_samples", 17536, "Number of samples to validate on")
+flags.DEFINE_integer("val_samples", 100, "Number of samples to validate on")
+flags.DEFINE_integer(
+    "num_train_samples", 14037397, "Number of samples in train dataset"
+)
+
 flags.mark_flag_as_required("probe_layer")
 
 
@@ -103,7 +107,7 @@ def validate(val_data, val_samples, model, whisper_model, loss_fn, dataloader_ar
 
 
 def get_probe_feat_dim(probe_layer):
-    dataset = VADDataset()
+    dataset = VADDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
     mels, *_ = next(iter(dataloader))
     whisper_model = WhisperActivationCache(activations_to_cache=[FLAGS.probe_layer])
@@ -141,7 +145,9 @@ def train(FLAGS, global_rank=0):
         FLAGS.steps = FLAGS.num_audio_clips // FLAGS.batch_size
     scheduler = CosineAnnealingLR(optimizer, T_max=FLAGS.steps, eta_min=0)
 
-    train_dataset = VADDataset(sql_path=FLAGS.train_data)
+    train_dataset = VADDataset(
+        sql_path=FLAGS.train_data, num_entries=FLAGS.num_train_samples
+    )
     dataloader_kwargs = {
         "batch_size": FLAGS.batch_size,
         "pin_memory": False,

@@ -85,11 +85,11 @@ class BaseActivationModule(ABC):
         self.hooks = []
         self.activations_to_cache = activations_to_cache
 
-    def forward(self):
+    def forward(self, x: torch.tensor):
         self.model.zero_grad()
         self.step += 1
         self.register_hooks()
-        model_out = self.custom_forward(self.model)
+        model_out = self.custom_forward(self.model, x)
         self.remove_hooks()
         return model_out
 

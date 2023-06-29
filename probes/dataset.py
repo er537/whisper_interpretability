@@ -14,10 +14,10 @@ from utils import load_audio, trim_audio
 class VADDataset(torch.utils.data.Dataset):
     def __init__(
         self,
+        num_entries,
         sql_path="/home/ellenar/testing.sql",
         class_labels=["NON_SPEECH", "SPEECH"],
         pad=True,  ## pad/trim for Whisper
-        num_entries=14037397,
     ):
         super().__init__()
         self.conn = sqlite.connect(sql_path)
@@ -30,7 +30,7 @@ class VADDataset(torch.utils.data.Dataset):
             padded_audio = whisper.pad_or_trim(raw_audio.flatten())
         else:
             padded_audio = raw_audio
-        non_padded_frac = raw_audio.shape[0] / padded_audio.shape[0]
+        non_padded_frac = min(1.0, raw_audio.shape[0] / padded_audio.shape[0])
         mels = torch.tensor(whisper.log_mel_spectrogram(padded_audio))
         return mels, non_padded_frac
 
