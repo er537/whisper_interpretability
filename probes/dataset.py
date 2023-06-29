@@ -1,29 +1,28 @@
 import torch
 import whisper
-import math
-import random
+import sqlite3 as sqlite
+import warnings
+
+warnings.filterwarnings(
+    action="ignore", category=UserWarning
+)  # whisper.log_mel_spectrogram generates a verbose warning
+
 
 from utils import device, load_audio, trim_audio
 
 
-class VADDataset(torch.utils.data.IterableDataset):
+class VADDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
+        sql_path="/home/ellenar/testing.sql",
         class_labels=["NON_SPEECH", "SPEECH"],
         pad=True,  ## pad/trim for Whisper
-        max_audio_samples=math.inf,
-        samples_per_batch=480_000,
-        batch_size=10,
+        num_entries=14037397,
     ):
         super().__init__()
-        self.dblx = open(dblx_path, "r")
-        self.datasets = {class_label: [] for class_label in class_labels}
-        self.samples_per_batch = 48_0000  # default window size used by Whisper
+        self.conn = sqlite.connect(sql_path)
+        self.length = num_entries
         self.pad = pad
-        self.max_audio_samples = max_audio_samples
-        self.batch_size = batch_size
-        self.samples_per_batch = samples_per_batch
         self.class_labels = class_labels
 
     def _get_mels(self, raw_audio):
@@ -32,51 +31,22 @@ class VADDataset(torch.utils.data.IterableDataset):
         mels = torch.tensor(whisper.log_mel_spectrogram(raw_audio)).to(device)
         return mels
 
-    def __iter__(self):
-        """
-        Keep a rolling buffer (self.datasets) of audio samples for each class, yield once we have a sample of the required class
-        """
-        chosen_dataclass = random.sample(self.class_labels, 1)[0]
-        while True:
-            line = self.dblx.readline()
-            if not line:
-                break
+    def get_size_of_db(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM data")
+        return len(cur.fetchall())
 
-            _, audio_path, start_time, end_time, label = line.split(" ")
-            label = label.strip("\n")
-            if label not in self.class_labels:
-                continue
+    def __getitem__(self, idx):
+        audio_path, label, start_time, end_time = self.conn.execute(
+            "SELECT audio_path, label, start_time, end_time FROM data WHERE key = ? LIMIT 1",
+            (idx,),
+        ).fetchone()
+        audio = load_audio(audio_path)
+        trimmed_audio = torch.tensor(
+            trim_audio(audio, float(start_time), float(end_time))
+        )
+        mels = self._get_mels(trimmed_audio)
+        return mels, label
 
-            audio = load_audio(audio_path)
-            trimmed_audio = torch.tensor(
-                trim_audio(audio, float(start_time), float(end_time))
-            )
-            self.datasets[label].append(trimmed_audio)
-
-            if label == chosen_dataclass:
-                audio = self.datasets[label].pop(0)
-                mels = self._get_mels(audio)
-                labels = torch.tensor(self.class_labels.index(label)).repeat(
-                    mels.shape[1]
-                )
-                yield mels, labels
-                chosen_dataclass = random.sample(self.class_labels, 1)[0]  # new class
-
-        # exhaust remaining buffers
-        incomplete = {label: True for label in self.class_labels}
-        while any(incomplete.values()):
-            for label in self.class_labels:
-                if len(self.datasets[label]) > 0:
-                    audio = self.datasets[label].pop(0)
-                    num_non_padded_frames = len(audio) // 160
-                    mels = self._get_mels(audio)
-                    labels = torch.tensor(self.class_labels.index(label)).repeat(
-                        num_non_padded_frames
-                    )
-                    pad_frames = mels.shape[1] - num_non_padded_frames
-                    labels = torch.nn.functional.pad(
-                        labels, (0, pad_frames), "constant", -1
-                    )
-                    yield mels, labels
-                else:
-                    incomplete[label] = False
+    def __len__(self):
+        return self.length
