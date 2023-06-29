@@ -11,7 +11,7 @@ from torch.nn.functional import interpolate
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from probes.dataset import VADDataset
-from probes.whisper_model import WhipserActivationCache
+from probes.whisper_model import WhisperActivationCache
 from probes.probe_model import Probe
 from base_train import train_init
 from utils import (
@@ -51,6 +51,7 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
+flags.DEFINE_integer("val_samples", 17536, "Number of samples to validate on")
 flags.mark_flag_as_required("probe_layer")
 
 
@@ -59,36 +60,38 @@ def get_class_freq(labels):
     return (labels.detach().cpu() == 0).sum(), (labels.detach().cpu() == 1).sum()
 
 
-def downsample_labels(labels, model_out):
+def resample_labels(labels, pred):
     """
-    mfccs are downsampled inside the model so we need to downsample the labels accordingly
+    mfccs are downsampled inside the model so we need to downsample the labels by the same fraction
     """
     return (
-        interpolate(labels.unsqueeze(0).float(), size=model_out.shape[2])
-        .squeeze(0)
-        .long()
+        interpolate(labels.unsqueeze(0).float(), size=pred.shape[1]).squeeze(0).long()
     )
 
 
-def validate(val_datastream, model, whisper_model, loss_fn):
+def validate(val_data, val_samples, model, whisper_model, loss_fn, dataloader_args):
     model.eval()
     losses = []
     frames_seen = 0
     accs = []
 
+    val_dataset = VADDataset(sql_path=val_data, num_entries=val_samples)
+    val_loader = iter(torch.utils.data.DataLoader(val_dataset, **dataloader_args))
     # reset random seed for deterministic validation
-    for data, labels in val_datastream:
+    for data, labels in val_loader:
         data, labels = data.to(device), labels.to(device)
 
         with torch.no_grad() and autocast():
-            whisper_model.forward()
-            input = whisper_model.activations[f"{FLAGS.probe_layer}.output"].to(device)
+            whisper_model.forward(data)
+            activations = whisper_model.activations[f"{FLAGS.probe_layer}.output"].to(
+                device
+            )
             whisper_model.reset_state()
-            pred = model(input)
+            pred = model(activations)
+            labels = resample_labels(labels, pred)
             pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
-            labels = downsample_labels(labels, pred)
             losses.append(loss_fn(pred, labels).item())
-            num_non_speech, num_speech = get_class_freq(labels)
+            num_speech, num_non_speech = get_class_freq(labels)
             frames_seen += num_non_speech + num_speech
 
             # Calculate accuracy as well
@@ -99,13 +102,12 @@ def validate(val_datastream, model, whisper_model, loss_fn):
     return np.array(losses).mean(), np.array(accs).mean(), frames_seen
 
 
-def get_probe_feat_dim(datapath, probe_layer):
-    dataset = VADDataset(dblx_path=datapath)
+def get_probe_feat_dim(probe_layer):
+    dataset = VADDataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
-    whisper_model = WhipserActivationCache(
-        dataloader=dataloader, activations_to_cache=[FLAGS.probe_layer]
-    )
-    whisper_model.forward()
+    mels, *_ = next(iter(dataloader))
+    whisper_model = WhisperActivationCache(activations_to_cache=[FLAGS.probe_layer])
+    whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
         f"{probe_layer}.output"
     ].shape  # (bsz, seq_len, d_model)
@@ -116,7 +118,7 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    fd = get_probe_feat_dim(FLAGS.train_data, FLAGS.probe_layer)
+    fd = get_probe_feat_dim(FLAGS.probe_layer)
     ## TODO: get shape of required layer and init probe
     model = Probe(feat_dim=fd).to(device)
 
@@ -139,26 +141,19 @@ def train(FLAGS, global_rank=0):
         FLAGS.steps = FLAGS.num_audio_clips // FLAGS.batch_size
     scheduler = CosineAnnealingLR(optimizer, T_max=FLAGS.steps, eta_min=0)
 
-    train_dataset = VADDataset(dblx_path=FLAGS.train_data)
+    train_dataset = VADDataset(sql_path=FLAGS.train_data)
     dataloader_kwargs = {
         "batch_size": FLAGS.batch_size,
         "pin_memory": False,
         "drop_last": True,
         "num_workers": FLAGS.dl_max_workers,
     }
-    train_loader = torch.utils.data.DataLoader(train_dataset, **dataloader_kwargs)
-    train_whisper_model = WhipserActivationCache(
-        dataloader=train_loader,
+    train_loader = iter(torch.utils.data.DataLoader(train_dataset, **dataloader_kwargs))
+    whisper_model = WhisperActivationCache(
         activations_to_cache=[FLAGS.probe_layer],
         model_name=FLAGS.whisper_model,
     )
-    val_dataset = VADDataset(dblx_path=FLAGS.val_data)
-    val_loader = torch.utils.data.DataLoader(val_dataset, **dataloader_kwargs)
-    val_whisper_model = WhipserActivationCache(
-        dataloader=val_loader,
-        activations_to_cache=[FLAGS.probe_layer],
-        model_name=FLAGS.whisper_model,
-    )
+
     # Object that contains the main state of the train loop
     state = {
         "model": model,
@@ -186,36 +181,37 @@ def train(FLAGS, global_rank=0):
     set_seeds(FLAGS.seed + state["step"] + global_rank)
 
     loss_fn = torch.nn.CrossEntropyLoss(reduction="mean", ignore_index=-1)
-    for data, labels in train_loader:
-        data, labels = data.to(device), labels.to(device)
-        num_non_speech, num_speech = get_class_freq(labels)
-        state["total_speech_seconds_seen"] += num_speech / 100
-        state["total_non_speech_seconds_seen"] += num_non_speech / 100
-
-        # Forward pass
+    while True:
         forward_time = 0
+        backward_time = 0
         losses = []
         for _ in range(FLAGS.grad_acc_steps):
+            data, labels = next(train_loader)
+            data, labels = data.to(device), labels.to(device)
+            num_speech, num_non_speech = get_class_freq(labels)
+            state["total_speech_seconds_seen"] += num_speech / 100
+            state["total_non_speech_seconds_seen"] += num_non_speech / 100
+
+            # Forward pass
             with autocast():
                 start_time = perf_counter()
-                train_whisper_model.forward()
-                input = train_whisper_model.activations[
+                whisper_model.forward(data)
+                activations = whisper_model.activations[
                     f"{FLAGS.probe_layer}.output"
                 ].to(device)
-                train_whisper_model.reset_state()
-                pred = model(input)
-                pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
-                labels = downsample_labels(labels, pred)
+                whisper_model.reset_state()
+                pred = model(activations)
+                labels = resample_labels(labels, pred)
                 forward_time += perf_counter() - start_time
+                pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
                 loss = loss_fn(pred, labels)
                 losses.append(loss.item())
                 meta.snapshot_memory_usage("mem_fwd")
 
-            # Backward pass
-            backward_time = 0
-            start_time = perf_counter()
-            loss.backward()
-            backward_time += perf_counter() - start_time
+                # Backward pass
+                start_time = perf_counter()
+                loss.backward()
+                backward_time += perf_counter() - start_time
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.clip_thresh)
         optimizer.step()
@@ -223,7 +219,6 @@ def train(FLAGS, global_rank=0):
         model.zero_grad()
         state["step"] += 1
         meta["loss"] = sum(losses) / FLAGS.grad_acc_steps
-        meta["time_forward"] = forward_time
         meta["time_backward"] = backward_time
 
         meta.snapshot_memory_usage("mem_bwd")
@@ -263,11 +258,21 @@ def train(FLAGS, global_rank=0):
                 if state["step"] > 1:
                     meta.log_tb_timings(tb_logger, state["step"])
 
+        # save out model periodically
+        if state["step"] % FLAGS.save_every == 0:
+            save_model(model, FLAGS.model_out + ".step" + str(state["step"]))
+            save_checkpoint(state, FLAGS.checkpoint_out + ".step" + str(state["step"]))
+
         # validate periodically
         if state["step"] % FLAGS.val_every == 0 and global_rank == 0:
             logging.info("Starting to validate")
             val_loss, val_acc, val_frames_seen = validate(
-                val_loader, model, val_whisper_model, loss_fn
+                FLAGS.val_data,
+                FLAGS.val_samples,
+                model,
+                whisper_model,
+                loss_fn,
+                dataloader_kwargs,
             )
             logging.info(
                 f"{state['step']} validation, loss={val_loss:.3f}, "
@@ -286,11 +291,6 @@ def train(FLAGS, global_rank=0):
                 # Save PyTorch model for PR area calculation
                 pytorch_model_path = FLAGS.model_out[:-3] + ".bestval"
                 torch.save(model, pytorch_model_path)
-
-        # save out model periodically
-        if state["step"] % FLAGS.save_every == 0:
-            save_model(model, FLAGS.model_out + ".step" + str(state["step"]))
-            save_checkpoint(state, FLAGS.checkpoint_out + ".step" + str(state["step"]))
 
         if FLAGS.steps != -1 and state["step"] >= FLAGS.steps:
             break

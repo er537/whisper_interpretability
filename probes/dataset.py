@@ -8,7 +8,7 @@ warnings.filterwarnings(
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
 
-from utils import device, load_audio, trim_audio
+from utils import load_audio, trim_audio
 
 
 class VADDataset(torch.utils.data.Dataset):
@@ -31,7 +31,7 @@ class VADDataset(torch.utils.data.Dataset):
         else:
             padded_audio = raw_audio
         non_padded_frac = raw_audio.shape[0] / padded_audio.shape[0]
-        mels = torch.tensor(whisper.log_mel_spectrogram(padded_audio)).to(device)
+        mels = torch.tensor(whisper.log_mel_spectrogram(padded_audio))
         return mels, non_padded_frac
 
     def get_size_of_db(self):
