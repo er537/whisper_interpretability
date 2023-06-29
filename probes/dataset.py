@@ -27,9 +27,12 @@ class VADDataset(torch.utils.data.Dataset):
 
     def _get_mels(self, raw_audio):
         if self.pad:
-            raw_audio = whisper.pad_or_trim(raw_audio.flatten())
-        mels = torch.tensor(whisper.log_mel_spectrogram(raw_audio)).to(device)
-        return mels
+            padded_audio = whisper.pad_or_trim(raw_audio.flatten())
+        else:
+            padded_audio = raw_audio
+        non_padded_frac = raw_audio.shape[0] / padded_audio.shape[0]
+        mels = torch.tensor(whisper.log_mel_spectrogram(padded_audio)).to(device)
+        return mels, non_padded_frac
 
     def get_size_of_db(self):
         cur = self.conn.cursor()
@@ -41,12 +44,18 @@ class VADDataset(torch.utils.data.Dataset):
             "SELECT audio_path, label, start_time, end_time FROM data WHERE key = ? LIMIT 1",
             (idx,),
         ).fetchone()
+        assert label in self.class_labels, f"Unknown label {label}"
+        label = torch.tensor(self.class_labels.index(label))  # label->idx
         audio = load_audio(audio_path)
-        trimmed_audio = torch.tensor(
-            trim_audio(audio, float(start_time), float(end_time))
-        )
-        mels = self._get_mels(trimmed_audio)
-        return mels, label
+        trimmed_audio = trim_audio(audio, float(start_time), float(end_time))
+        mels, non_padded_frac = self._get_mels(torch.tensor(trimmed_audio))
+        labels = label.repeat(
+            int(non_padded_frac * mels.shape[1])
+        )  # upsample to give the same no. of labels non padded mfccs
+        labels = torch.cat(
+            (labels, -1 * torch.ones(mels.shape[1] - labels.shape[0])), dim=0
+        )  # use -1 to denote padding frames
+        return mels, labels
 
     def __len__(self):
         return self.length
