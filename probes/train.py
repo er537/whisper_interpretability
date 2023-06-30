@@ -106,11 +106,13 @@ def validate(val_data, val_samples, model, whisper_model, loss_fn, dataloader_ar
     return np.array(losses).mean(), np.array(accs).mean(), frames_seen
 
 
-def get_probe_feat_dim(probe_layer):
+def get_probe_feat_dim(probe_layer, model_name):
     dataset = VADDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
     mels, *_ = next(iter(dataloader))
-    whisper_model = WhisperActivationCache(activations_to_cache=[FLAGS.probe_layer])
+    whisper_model = WhisperActivationCache(
+        model_name=model_name, activations_to_cache=[FLAGS.probe_layer]
+    )
     whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
         f"{probe_layer}.output"
@@ -122,7 +124,7 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    fd = get_probe_feat_dim(FLAGS.probe_layer)
+    fd = get_probe_feat_dim(FLAGS.probe_layer, FLAGS.whisper_model)
     ## TODO: get shape of required layer and init probe
     model = Probe(feat_dim=fd).to(device)
 

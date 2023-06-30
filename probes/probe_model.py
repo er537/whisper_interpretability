@@ -10,5 +10,5 @@ class Probe(nn.Module):
 
     def forward(self, x):
         x = self.w1(x)
-        x = self.w2(x.permute(0, 2, 1)) # bsz, outdim, seq_len
-        return self.softmax(x.permute(0, 2, 1))
+        x = self.w2(x.permute(0, 2, 1)).permute(0, 2, 1)  # bsz, outdim, seq_len
+        return self.softmax(x)
