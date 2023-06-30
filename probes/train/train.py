@@ -12,9 +12,9 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
-from probes.dataset import VADDataset
-from probes.whisper_model import WhisperActivationCache
-from probes.probe_model import Probe
+from probes.train.dataset import VADDataset
+from probes.train.whisper_model import WhisperActivationCache
+from probes.train.probe_model import Probe
 from base_train import train_init
 from utils import (
     load_checkpoint,
@@ -75,7 +75,9 @@ def resample_labels(labels, pred):
     )
 
 
-def validate(val_data, val_samples, model, whisper_model, loss_fn, dataloader_args):
+def validate(
+    val_data, val_samples, probe_layer, model, whisper_model, loss_fn, dataloader_args
+):
     model.eval()
     losses = []
     frames_seen = 0
@@ -89,9 +91,7 @@ def validate(val_data, val_samples, model, whisper_model, loss_fn, dataloader_ar
 
         with torch.no_grad() and autocast():
             whisper_model.forward(data)
-            activations = whisper_model.activations[f"{FLAGS.probe_layer}.output"].to(
-                device
-            )
+            activations = whisper_model.activations[f"{probe_layer}.output"].to(device)
             whisper_model.reset_state()
             pred = model(activations)
             labels = resample_labels(labels, pred)
@@ -239,7 +239,7 @@ def train(FLAGS, global_rank=0):
         torch.nn.utils.clip_grad_norm_(dist_model.parameters(), FLAGS.clip_thresh)
         optimizer.step()
         scheduler.step()
-        model.zero_grad()
+        dist_model.zero_grad()
         state["step"] += 1
         meta["loss"] = sum(losses) / FLAGS.grad_acc_steps
         meta["time_backward"] = backward_time
@@ -292,6 +292,7 @@ def train(FLAGS, global_rank=0):
             val_loss, val_acc, val_frames_seen = validate(
                 FLAGS.val_data,
                 FLAGS.val_samples,
+                FLAGS.probe_layer,
                 model,
                 whisper_model,
                 loss_fn,
