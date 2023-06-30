@@ -1,5 +1,5 @@
 import torch
-import whisper
+import whisper_repo
 import sqlite3 as sqlite
 import warnings
 
@@ -27,11 +27,11 @@ class VADDataset(torch.utils.data.Dataset):
 
     def _get_mels(self, raw_audio):
         if self.pad:
-            padded_audio = whisper.pad_or_trim(raw_audio.flatten())
+            padded_audio = whisper_repo.pad_or_trim(raw_audio.flatten())
         else:
             padded_audio = raw_audio
         non_padded_frac = min(1.0, raw_audio.shape[0] / padded_audio.shape[0])
-        mels = torch.tensor(whisper.log_mel_spectrogram(padded_audio))
+        mels = torch.tensor(whisper_repo.log_mel_spectrogram(padded_audio))
         return mels, non_padded_frac
 
     def get_size_of_db(self):

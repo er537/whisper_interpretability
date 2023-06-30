@@ -1,5 +1,5 @@
 import torch
-import whisper
+import whisper_repo
 
 from activation_similarities.dataset import ClasswiseDataset
 from utils import device, BaseActivationModule
@@ -15,7 +15,7 @@ class WhipserActivationModule(BaseActivationModule):
         samples_per_class: int = 480_000,
         batch_size: int = 1,
     ):
-        self.model = whisper.load_model(model_name)
+        self.model = whisper_repo.load_model(model_name)
         self.loader = self._get_dataloader(data_class, samples_per_class, batch_size)
         self.language = language
         self.activations_to_cache = (
@@ -35,7 +35,7 @@ class WhipserActivationModule(BaseActivationModule):
         return iter(torch.utils.data.DataLoader(dataset, batch_size))
 
     def custom_forward(self, model: torch.nn.Module) -> dict:
-        options = whisper.DecodingOptions(
+        options = whisper_repo.DecodingOptions(
             language=self.language, without_timestamps=False, fp16=False
         )
         model.to(device)

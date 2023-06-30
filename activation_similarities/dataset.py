@@ -3,7 +3,7 @@ import torch
 import os
 import numpy as np
 from collections import defaultdict
-import whisper
+import whisper_repo
 
 from utils import device, load_audio, trim_audio
 
@@ -90,8 +90,8 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
                     samples_yielded : samples_yielded + self.samples_per_batch
                 ]
                 if self.pad:
-                    audio = whisper.pad_or_trim(audio.flatten())
-                mels = torch.tensor(whisper.log_mel_spectrogram(audio)).to(device)
+                    audio = whisper_repo.pad_or_trim(audio.flatten())
+                mels = torch.tensor(whisper_repo.log_mel_spectrogram(audio)).to(device)
 
                 yield mels, label
                 samples_yielded += self.samples_per_batch
