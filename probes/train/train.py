@@ -13,7 +13,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
 from probes.train.dataset import VADDataset
-from probes.train.whisper_model import WhisperActivationCache
+from probes.train.whisper_activ_cache import WhisperActivationCache
 from probes.train.probe_model import Probe
 from base_train import train_init
 from utils import (

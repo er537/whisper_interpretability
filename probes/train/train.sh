@@ -14,8 +14,8 @@ experiment_suffix=
 train_data=/home/ellenar/probes/VAD_train.sql
 val_data=/home/ellenar/probes/VAD_val.sql
 lr=4e-4
-batch_size=50
-n_gpus_per_node=1
+batch_size=25
+n_gpus_per_node=2
 steps=10000
 grad_acc_steps=2
 
@@ -37,7 +37,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/vad_probes/train}
-experiment_suffix=${experiment_suffix:-${probe_layer}_${whisper_model}_convolution}
+experiment_suffix=${experiment_suffix:-${probe_layer}_${whisper_model}}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training VAD"}"
 model_out_dir=${WORK_DIR}/models
@@ -92,7 +92,7 @@ trap cleanup EXIT INT QUIT TERM
 echo "\$(date -u) starting \${JOB_ID}" >> ${WORK_DIR}/sge_job_id
 
 if [[ ! -f ${WORK_DIR}/done_train ]]; then
-  python3 -m probes.train \
+  python3 -m probes.train.train \
     --expdir $WORK_DIR \
     --steps $steps \
     --train_data $train_copy \
