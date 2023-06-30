@@ -9,6 +9,8 @@ from torch.cuda.amp import autocast
 from torch.optim import RAdam
 from torch.nn.functional import interpolate
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 
 from probes.dataset import VADDataset
 from probes.whisper_model import WhisperActivationCache
@@ -111,7 +113,7 @@ def get_probe_feat_dim(probe_layer, model_name):
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
     mels, *_ = next(iter(dataloader))
     whisper_model = WhisperActivationCache(
-        model_name=model_name, activations_to_cache=[FLAGS.probe_layer]
+        model_name=model_name, activations_to_cache=[probe_layer]
     )
     whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
@@ -125,8 +127,12 @@ def train(FLAGS, global_rank=0):
     set_seeds(FLAGS.seed)
 
     fd = get_probe_feat_dim(FLAGS.probe_layer, FLAGS.whisper_model)
-    ## TODO: get shape of required layer and init probe
     model = Probe(feat_dim=fd).to(device)
+    if FLAGS.n_devices > 1:
+        dist_model = DDP(model, device_ids=[global_rank])
+        model = dist_model.module
+    else:
+        dist_model = model
 
     # setup logging
     meta = Metadata(history_size=FLAGS.log_tb_every)
@@ -141,7 +147,7 @@ def train(FLAGS, global_rank=0):
     logging.info("Model: %.2fM" % (sum(p.numel() for p in model.parameters()) / 1.0e6))
 
     optimizer = RAdam(
-        model.parameters(), eps=1e-5, lr=FLAGS.lr, weight_decay=FLAGS.weight_decay
+        dist_model.parameters(), eps=1e-5, lr=FLAGS.lr, weight_decay=FLAGS.weight_decay
     )
     if FLAGS.steps == -1:
         FLAGS.steps = FLAGS.num_audio_clips // FLAGS.batch_size
@@ -150,13 +156,22 @@ def train(FLAGS, global_rank=0):
     train_dataset = VADDataset(
         sql_path=FLAGS.train_data, num_entries=FLAGS.num_train_samples
     )
+    train_sampler = (
+        DistributedSampler(train_dataset, rank=global_rank, drop_last=True)
+        if FLAGS.n_devices > 1
+        else None
+    )
     dataloader_kwargs = {
         "batch_size": FLAGS.batch_size,
         "pin_memory": False,
         "drop_last": True,
         "num_workers": FLAGS.dl_max_workers,
     }
-    train_loader = iter(torch.utils.data.DataLoader(train_dataset, **dataloader_kwargs))
+    train_loader = iter(
+        torch.utils.data.DataLoader(
+            train_dataset, sampler=train_sampler, **dataloader_kwargs
+        )
+    )
     whisper_model = WhisperActivationCache(
         activations_to_cache=[FLAGS.probe_layer],
         model_name=FLAGS.whisper_model,
@@ -175,7 +190,7 @@ def train(FLAGS, global_rank=0):
     }
 
     meta["effective_batch_size"] = FLAGS.batch_size
-    meta["model_params"] = sum(x.numel() for x in model.parameters())
+    meta["model_params"] = sum(x.numel() for x in dist_model.parameters())
 
     if FLAGS.checkpoint:
         # loading state_dicts in-place
@@ -208,7 +223,7 @@ def train(FLAGS, global_rank=0):
                     f"{FLAGS.probe_layer}.output"
                 ].to(device)
                 whisper_model.reset_state()
-                pred = model(activations)
+                pred = dist_model(activations)
                 labels = resample_labels(labels, pred)
                 forward_time += perf_counter() - start_time
                 pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
@@ -221,7 +236,7 @@ def train(FLAGS, global_rank=0):
                 loss.backward()
                 backward_time += perf_counter() - start_time
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.clip_thresh)
+        torch.nn.utils.clip_grad_norm_(dist_model.parameters(), FLAGS.clip_thresh)
         optimizer.step()
         scheduler.step()
         model.zero_grad()

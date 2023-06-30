@@ -1,6 +1,11 @@
 import os
 import torch
 from absl import flags, logging
+import torch.distributed as dist
+import torch.multiprocessing as mp
+import datetime
+import socket
+import types
 
 from utils import device, get_checkpoint_to_start_from
 
@@ -49,6 +54,74 @@ flags.mark_flag_as_required("val_every")
 flags.mark_flag_as_required("train_data")
 flags.mark_flag_as_required("val_data")
 flags.mark_flag_as_required("expdir")
+
+
+def free_port():
+    """
+    Determines a free port using sockets.
+    https://github.com/SeleniumHQ/selenium/blob/master/py/selenium/webdriver/common/utils.py#L31
+    """
+    free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    free_socket.bind(("0.0.0.0", 0))
+    free_socket.listen(5)
+    port = free_socket.getsockname()[1]
+    free_socket.close()
+    return port
+
+
+def extract_flags(FLAGS):
+    """Return abseil flags as a static namespace"""
+    return types.SimpleNamespace(**{k: v.value for k, v in FLAGS.__flags.items()})
+
+
+def train_worker(local_rank, node_rank, n_gpus, n_nodes, backend, train_fn, *args):
+    # local_rank: process rank within node (i.e. gpu device id on server in DDP)
+    # rank: process rank across all nodes, [0:(n_gpus-1)]
+    # node_rank: node rank amongst all nodes [0:(n_nodes-1)]
+    # backend: "nccl" or "gloo" (gloo required for sparse grads)
+    global_rank = node_rank * (n_gpus // n_nodes) + local_rank
+    print(f"Initializing process group on {global_rank=}", flush=True)
+    dist.init_process_group(
+        backend=backend,
+        rank=global_rank,
+        world_size=n_gpus,
+        timeout=datetime.timedelta(seconds=360),
+    )
+    print(f"Initialized process group on {global_rank=}", flush=True)
+    torch.cuda.set_device(local_rank)
+    train_fn(*args, global_rank=global_rank)
+    dist.destroy_process_group()
+
+
+def distributed_init(node_rank, n_gpus, n_nodes, backend, train_fn, *args):
+    if "MASTER_ADDR" not in os.environ:
+        os.environ["MASTER_ADDR"] = "localhost"
+    if "MASTER_PORT" not in os.environ:
+        os.environ["MASTER_PORT"] = str(free_port())
+    if "NCCL_DEBUG" not in os.environ:
+        os.environ["NCCL_DEBUG"] = "WARN"
+    # hard-coded prefix corresponding to mellanox 25Gbs to avoid picking up the wrong network card
+    os.environ["NCCL_SOCKET_IFNAME"] = "enp,ens,eno1"
+    # force crashing on nccl issues like hanging broadcast
+    os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"
+
+    os.environ["NCCL_SOCKET_NTHREADS"] = "8"
+    os.environ["NCCL_NSOCKS_PERTHREAD"] = "8"
+
+    if socket.getfqdn() == "gpu007.grid.speechmatics.io":
+        # gpu007 has a different topology
+        # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-p2p-level
+        # Can only use P2P when GPUs are connected through PCI switches
+        # Warning: this is slow
+        os.environ["NCCL_P2P_LEVEL"] = "PXB"
+
+    n_procs = n_gpus // n_nodes
+    mp.spawn(
+        train_worker,
+        (node_rank, n_gpus, n_nodes, backend, train_fn, *args),
+        nprocs=n_procs,
+        join=True,
+    )
 
 
 def train_init(train, unused_argv):
@@ -134,4 +207,15 @@ def train_init(train, unused_argv):
         FLAGS.n_devices / device_count
     )  # assumes equal number of gpus per node
 
-    train(FLAGS)
+    # train method to be defined at endpoint
+    if FLAGS.n_devices > 1:
+        distributed_init(
+            FLAGS.node_rank,
+            FLAGS.n_devices,
+            FLAGS.n_nodes,
+            FLAGS.dist_backend,
+            train,
+            extract_flags(FLAGS),
+        )
+    else:
+        train(FLAGS)
