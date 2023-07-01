@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
-from probes.train.dataset import VADDataset
+from probes.train.dataset import MultiClassDataset
 from probes.train.whisper_activ_cache import WhisperActivationCache
 from probes.train.probe_model import Probe
 from base_train import train_init
@@ -54,9 +54,7 @@ flags.DEFINE_integer(
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
 flags.DEFINE_integer("val_samples", 100, "Number of samples to validate on")
-flags.DEFINE_integer(
-    "num_train_samples", 14037397, "Number of samples in train dataset"
-)
+flags.DEFINE_integer("num_train_samples", 2297662, "Number of samples in train dataset")
 
 flags.mark_flag_as_required("probe_layer")
 
@@ -83,8 +81,10 @@ def validate(
     frames_seen = 0
     accs = []
 
-    val_dataset = VADDataset(sql_path=val_data, num_entries=val_samples)
-    val_loader = iter(torch.utils.data.DataLoader(val_dataset, **dataloader_args))
+    val_dataset = MultiClassDataset(sql_path=val_data, num_entries=val_samples)
+    val_loader = iter(
+        torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args)
+    )
     # reset random seed for deterministic validation
     for data, labels in val_loader:
         data, labels = data.to(device), labels.to(device)
@@ -109,8 +109,8 @@ def validate(
 
 
 def get_probe_feat_dim(probe_layer, model_name):
-    dataset = VADDataset(num_entries=1)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+    dataset = MultiClassDataset(num_entries=1)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     mels, *_ = next(iter(dataloader))
     whisper_model = WhisperActivationCache(
         model_name=model_name, activations_to_cache=[probe_layer]
@@ -153,13 +153,8 @@ def train(FLAGS, global_rank=0):
         FLAGS.steps = FLAGS.num_audio_clips // FLAGS.batch_size
     scheduler = CosineAnnealingLR(optimizer, T_max=FLAGS.steps, eta_min=0)
 
-    train_dataset = VADDataset(
+    train_dataset = MultiClassDataset(
         sql_path=FLAGS.train_data, num_entries=FLAGS.num_train_samples
-    )
-    train_sampler = (
-        DistributedSampler(train_dataset, rank=global_rank, drop_last=True)
-        if FLAGS.n_devices > 1
-        else None
     )
     dataloader_kwargs = {
         "batch_size": FLAGS.batch_size,
@@ -167,11 +162,22 @@ def train(FLAGS, global_rank=0):
         "drop_last": True,
         "num_workers": FLAGS.dl_max_workers,
     }
-    train_loader = iter(
-        torch.utils.data.DataLoader(
-            train_dataset, sampler=train_sampler, **dataloader_kwargs
+    if FLAGS.n_devices > 1:
+        train_sampler = (DistributedSampler(
+            train_dataset, rank=global_rank, drop_last=True, shuffle=True
+        ))
+        train_loader = iter(
+            torch.utils.data.DataLoader(
+                train_dataset, sampler=train_sampler, **dataloader_kwargs
+            )
         )
-    )
+    else:
+        train_loader = iter(
+            torch.utils.data.DataLoader(
+                train_dataset, sampler=train_sampler, shuffle=True, **dataloader_kwargs
+            )
+        )
+
     whisper_model = WhisperActivationCache(
         activations_to_cache=[FLAGS.probe_layer],
         model_name=FLAGS.whisper_model,

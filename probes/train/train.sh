@@ -11,13 +11,13 @@ JOB_REASON=
 experiment_suffix=
 
 #Training hyperparameters
-train_data=/home/ellenar/probes/VAD_train.sql
-val_data=/home/ellenar/probes/VAD_val.sql
+train_data=/home/ellenar/probes/fr_de_train.sql
+val_data=/home/ellenar/probes/fr_de_val.sql
 lr=4e-4
-batch_size=25
+batch_size=50
 n_gpus_per_node=2
 steps=10000
-grad_acc_steps=2
+grad_acc_steps=1
 
 #Logging
 log_every=10
@@ -26,7 +26,7 @@ val_every=100
 save_every=100
 test_pr_every=
 
-whisper_model=small
+whisper_model=tiny
 probe_layer='encoder.blocks.3'
 val_samples=100
 
@@ -36,10 +36,10 @@ set -o pipefail
 
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
-WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/vad_probes/train}
-experiment_suffix=${experiment_suffix:-${probe_layer}_${whisper_model}}
+WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/langid_probes/train}
+experiment_suffix=${experiment_suffix:-langID_${probe_layer}_${whisper_model}_conv}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
-JOB_REASON="${JOB_REASON:-"Training VAD"}"
+JOB_REASON="${JOB_REASON:-"Training LangID"}"
 model_out_dir=${WORK_DIR}/models
 
 mkdir -p $model_out_dir && chmod g+w "$WORK_DIR"

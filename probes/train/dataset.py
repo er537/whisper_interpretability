@@ -11,12 +11,12 @@ warnings.filterwarnings(
 from utils import load_audio, trim_audio
 
 
-class VADDataset(torch.utils.data.Dataset):
+class MultiClassDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         num_entries,
-        sql_path="/home/ellenar/testing.sql",
-        class_labels=["NON_SPEECH", "SPEECH"],
+        sql_path="/home/ellenar/probes/fr_de_train.sql",
+        class_labels=["fr", "de"],
         pad=True,  ## pad/trim for Whisper
     ):
         super().__init__()
