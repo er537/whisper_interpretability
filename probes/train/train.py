@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
-from probes.train.dataset import MultiClassDataset
+from probes.train.dataset import MultiClassDataset, collate_fn
 from probes.train.whisper_activ_cache import WhisperActivationCache
 from probes.train.probe_model import Probe
 from base_train import train_init
@@ -161,11 +161,12 @@ def train(FLAGS, global_rank=0):
         "pin_memory": False,
         "drop_last": True,
         "num_workers": FLAGS.dl_max_workers,
+        "collate_fn" : collate_fn
     }
     if FLAGS.n_devices > 1:
-        train_sampler = (DistributedSampler(
+        train_sampler = DistributedSampler(
             train_dataset, rank=global_rank, drop_last=True, shuffle=True
-        ))
+        )
         train_loader = iter(
             torch.utils.data.DataLoader(
                 train_dataset, sampler=train_sampler, **dataloader_kwargs
@@ -174,7 +175,7 @@ def train(FLAGS, global_rank=0):
     else:
         train_loader = iter(
             torch.utils.data.DataLoader(
-                train_dataset, sampler=train_sampler, shuffle=True, **dataloader_kwargs
+                train_dataset, shuffle=True, **dataloader_kwargs
             )
         )
 
