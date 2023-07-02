@@ -29,9 +29,11 @@ from utils import (
     prepare_tb_logging,
     set_seeds,
     snapshot_memory_usage,
+    dist_logging,
 )
 
 torch.backends.cudnn.benchmark = True
+logging.set_verbosity(logging.INFO)
 
 FLAGS = flags.FLAGS  # See base_train.py for others
 
@@ -115,9 +117,7 @@ def get_probe_feat_dim(probe_layer, model_name):
     dataset = MultiClassDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     mels, *_ = next(iter(dataloader))
-    whisper_model = WhisperActivationCache(
-        model_name=model_name, activations_to_cache=[probe_layer]
-    )
+    whisper_model = Wav2VecActivationCache(layer_idx_to_cache=probe_layer)
     whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
         f"{probe_layer}.output"
@@ -129,6 +129,7 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
+    dist_logging(f"here {global_rank}", rank=global_rank)
     fd = get_probe_feat_dim(FLAGS.probe_layer, FLAGS.whisper_model)
     model = Probe(feat_dim=fd).to(device)
     if FLAGS.n_devices > 1:
@@ -142,12 +143,17 @@ def train(FLAGS, global_rank=0):
     memory_usage = snapshot_memory_usage()
     tb_logger = prepare_tb_logging(FLAGS.expdir)
     if memory_usage is not None:
-        logging.info(f"pretrain_mem {memory_usage['allocated']:.5f}GB")
+        dist_logging(
+            f"pretrain_mem {memory_usage['allocated']:.5f}GB", rank=global_rank
+        )
 
     if FLAGS.model_out is None:
         FLAGS.model_out = FLAGS.expdir + "/model"
 
-    logging.info("Model: %.2fM" % (sum(p.numel() for p in model.parameters()) / 1.0e6))
+    dist_logging(
+        "Model: %.2fM" % (sum(p.numel() for p in model.parameters()) / 1.0e6),
+        rank=global_rank,
+    )
 
     optimizer = RAdam(
         dist_model.parameters(), eps=1e-5, lr=FLAGS.lr, weight_decay=FLAGS.weight_decay
@@ -182,9 +188,8 @@ def train(FLAGS, global_rank=0):
             )
         )
 
-    whisper_model = WhisperActivationCache(
-        activations_to_cache=[FLAGS.probe_layer],
-        model_name=FLAGS.whisper_model,
+    whisper_model = Wav2VecActivationCache(
+        layer_idx_to_cache=FLAGS.probe_layer,
     )
 
     # Object that contains the main state of the train loop
@@ -257,7 +262,9 @@ def train(FLAGS, global_rank=0):
         meta.snapshot_memory_usage("mem_bwd")
 
         if state["step"] % FLAGS.log_every == 0 and global_rank == 0:
-            logging.info(f"step {state['step']}, loss {loss.item():.3f}")
+            dist_logging(
+                f"step {state['step']}, loss {loss.item():.3f}", rank=global_rank
+            )
 
             # log training losses
             if state["step"] % FLAGS.log_tb_every == 0 and global_rank == 0:
@@ -298,7 +305,7 @@ def train(FLAGS, global_rank=0):
 
         # validate periodically
         if state["step"] % FLAGS.val_every == 0 and global_rank == 0:
-            logging.info("Starting to validate")
+            dist_logging("Starting to validate", rank=global_rank)
             val_loss, val_acc, val_frames_seen = validate(
                 FLAGS.val_data,
                 FLAGS.val_samples,
@@ -308,16 +315,17 @@ def train(FLAGS, global_rank=0):
                 loss_fn,
                 dataloader_kwargs,
             )
-            logging.info(
+            dist_logging(
                 f"{state['step']} validation, loss={val_loss:.3f}, "
                 f"acc={val_acc:.3f}, "
-                f"{val_frames_seen:,} frames validated"
+                f"{val_frames_seen:,} frames validated",
+                rank=global_rank,
             )
             # log validation losses
             tb_logger.add_scalar("val/loss", val_loss, state["step"])
             tb_logger.add_scalar("val/acc", val_acc, state["step"])
             if val_loss.item() < state["best_val_loss"]:
-                logging.info("Saving new best validation")
+                dist_logging("Saving new best validation", rank=global_rank)
                 save_model(model, FLAGS.model_out + ".bestval")
                 state["best_val_loss"] = val_loss.item()
                 save_checkpoint(state, FLAGS.checkpoint_out + ".bestval")

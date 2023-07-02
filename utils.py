@@ -12,10 +12,14 @@ import signal
 import os
 import threading
 from absl import logging
-from logging import Formatter
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def dist_logging(message, rank=0):
+    if rank == 0:
+        logging.info(message)
 
 
 def trim_audio(
@@ -29,7 +33,6 @@ def trim_audio(
     """
     start_frame = int(sample_rate * start_time)
     end_frame = int(sample_rate * end_time)
-    assert len(array) > end_frame - start_frame
 
     return array[start_frame:end_frame]
 

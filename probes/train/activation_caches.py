@@ -16,9 +16,7 @@ class WhisperActivationCache(BaseActivationModule):
         activations_to_cache: list = ["encoder.blocks.0"],
     ):
         self.model = whisper.load_model(model_name).to(device)
-        self.activations_to_cache = (
-            activations_to_cache if len(activations_to_cache) > 0 else "all"
-        )
+        self.activations_to_cache = [activations_to_cache]
         self.named_modules = list(
             {name: mod for name, mod in self.model.named_modules()}
         )
@@ -43,9 +41,16 @@ class Wav2VecActivationCache:
         layer_idx_to_cache: int = 0,  # idx in range {0, 10}
     ):
         self.model = torchaudio.pipelines.WAV2VEC2_ASR_BASE_960H.get_model().to(device)
-        self.layer_idx_to_cache = layer_idx_to_cache
+        self.layer_idx_to_cache = int(layer_idx_to_cache)
+        self.activations = {}
 
-    def custom_forward(self, waveforms) -> dict:
+    def forward(self, waveforms) -> dict:
         with torch.inference_mode():
             features, _ = self.model.extract_features(waveforms.squeeze(1))
-        return features[self.layer_idx_to_cache]
+        self.activations[f"{self.layer_idx_to_cache}.output"] = features[
+            self.layer_idx_to_cache
+        ]
+
+    @staticmethod
+    def reset_state():
+        return

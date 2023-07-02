@@ -14,15 +14,15 @@ experiment_suffix=
 train_data=/home/ellenar/probes/fr_de_train.sql
 val_data=/home/ellenar/probes/fr_de_val.sql
 lr=4e-4
-batch_size=50
+batch_size=25
 n_gpus_per_node=2
-steps=10000
-grad_acc_steps=1
+steps=1000
+grad_acc_steps=2
 
 #Logging
 log_every=10
 log_tb_every=10
-val_every=100
+val_every=25
 save_every=100
 test_pr_every=
 
@@ -37,7 +37,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/langid_probes/train}
-experiment_suffix=${experiment_suffix:-langID_${probe_layer}_${whisper_model}_conv}
+experiment_suffix=${experiment_suffix:-langid_probes_wav2vec_layer${probe_layer}}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training LangID"}"
 model_out_dir=${WORK_DIR}/models

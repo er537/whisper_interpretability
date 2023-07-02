@@ -21,6 +21,11 @@ def create_sql_cache(dblx_path, sql_path):
             if not line:
                 break
             _, audio_path, start_time, end_time, label = line.split(" ")
+            if (
+                audio_path
+                == "/data/audio/mirrored/en/mirror_wav/cantab/data/AMI/processed/data-joined/IS1002b.Mix-Headset.wav.wav"
+            ):
+                continue
             label = label.strip("\n")
             cur.execute(
                 "INSERT INTO data VALUES(?,?,?,?,?);",
