@@ -17,7 +17,7 @@ def collate_fn(batch):
     labels = [x[1] for x in batch]
     data = pad_sequence(data, batch_first=True, padding_value=-1)
     labels = pad_sequence(labels, batch_first=True, padding_value=-1)
-    return data.squeeze(-1), labels
+    return data.permute(0, 2, 1), labels
 
 
 class MultiClassDataset(torch.utils.data.Dataset):

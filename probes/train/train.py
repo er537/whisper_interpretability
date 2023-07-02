@@ -13,7 +13,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
 from probes.train.dataset import MultiClassDataset, collate_fn
-from probes.train.whisper_activ_cache import WhisperActivationCache
+from probes.train.activation_caches import (
+    WhisperActivationCache,
+    Wav2VecActivationCache,
+)
 from probes.train.probe_model import Probe
 from base_train import train_init
 from utils import (
@@ -161,7 +164,7 @@ def train(FLAGS, global_rank=0):
         "pin_memory": False,
         "drop_last": True,
         "num_workers": FLAGS.dl_max_workers,
-        "collate_fn" : collate_fn
+        "collate_fn": collate_fn,
     }
     if FLAGS.n_devices > 1:
         train_sampler = DistributedSampler(

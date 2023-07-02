@@ -1,10 +1,15 @@
 import torch
 import whisper
+import torchaudio
 
 from utils import device, BaseActivationModule
 
 
 class WhisperActivationCache(BaseActivationModule):
+    """
+    Use hooks in BaseActivationModule to cache intermediate activations while running forward pass
+    """
+
     def __init__(
         self,
         model_name: str = "tiny",
@@ -25,3 +30,22 @@ class WhisperActivationCache(BaseActivationModule):
         )
         output = model.decode(mels, options)
         return output
+
+
+class Wav2VecActivationCache:
+    """
+    Wav2Vec returns the output from every transformer block as a list of features,
+    so we don't need to use hooks
+    """
+
+    def __init__(
+        self,
+        layer_idx_to_cache: int = 0,  # idx in range {0, 10}
+    ):
+        self.model = torchaudio.pipelines.WAV2VEC2_ASR_BASE_960H.get_model().to(device)
+        self.layer_idx_to_cache = layer_idx_to_cache
+
+    def custom_forward(self, waveforms) -> dict:
+        with torch.inference_mode():
+            features, _ = self.model.extract_features(waveforms.squeeze(1))
+        return features[self.layer_idx_to_cache]
