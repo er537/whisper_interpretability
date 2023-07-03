@@ -692,6 +692,13 @@ class DecodingTask:
 
                 # expand the tokens tensor with the selected next tokens
                 tokens, completed = self.decoder.update(tokens, logits, sum_logprobs)
+                # if i == 1:
+                #     tokens = torch.tensor(
+                #         [[50258, 50259, 50359, 15111]], device="cuda:0"
+                #     )
+                # if i == 2:
+                #     logits_softmax = torch.softmax(logits, dim=-1)
+                #     print(torch.topk(logits_softmax, k=5))
 
                 if completed or tokens.shape[-1] > self.n_ctx:
                     break
