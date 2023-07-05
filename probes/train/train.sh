@@ -5,7 +5,7 @@ set -euo pipefail
 WORK_ROOT=
 WORK_DIR=
 
-JOB_QUEUE="aml-gpu.q@b2,aml-gpu.q@b3"
+JOB_QUEUE="aml-gpu.q@b1,aml-gpu.q@b2,aml-gpu.q@b3"
 JOB_NAME=
 JOB_REASON=
 experiment_suffix=
@@ -14,10 +14,10 @@ experiment_suffix=
 train_data=/home/ellenar/probes/fr_de_train.sql
 val_data=/home/ellenar/probes/fr_de_val.sql
 lr=4e-4
-batch_size=25
+batch_size=50
 n_gpus_per_node=2
 steps=1000
-grad_acc_steps=2
+grad_acc_steps=1
 
 #Logging
 log_every=10
@@ -37,7 +37,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/langid_probes/train}
-experiment_suffix=${experiment_suffix:-langid_probes_wav2vec_layer${probe_layer}}
+experiment_suffix=${experiment_suffix:-average_activations_whisper_${probe_layer}}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training LangID"}"
 model_out_dir=${WORK_DIR}/models

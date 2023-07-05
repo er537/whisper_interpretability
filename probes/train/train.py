@@ -13,12 +13,11 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
 from probes.train.dataset import MultiClassDataset, collate_fn
-from probes.train.activation_caches import (
+from probes.utils.activation_caches import (
     WhisperActivationCache,
-    Wav2VecActivationCache,
 )
 from probes.train.probe_model import Probe
-from base_train import train_init
+from probes.train.base_train import train_init
 from utils import (
     load_checkpoint,
     save_checkpoint,
@@ -73,9 +72,7 @@ def resample_labels(labels, pred):
     """
     mfccs are downsampled inside the model so we need to downsample the labels by the same fraction
     """
-    return (
-        interpolate(labels.unsqueeze(0).float(), size=pred.shape[1]).squeeze(0).long()
-    )
+    return interpolate(labels.unsqueeze(0).float(), size=pred.shape[1]).squeeze(0)
 
 
 def validate(
@@ -98,9 +95,11 @@ def validate(
             whisper_model.forward(data)
             activations = whisper_model.activations[f"{probe_layer}.output"].to(device)
             whisper_model.reset_state()
+            activations = activations.mean(dim=1)
             pred = model(activations)
-            labels = resample_labels(labels, pred)
-            pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
+            # labels = resample_labels(labels, pred)
+            # pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
+            labels = labels[:, 0].long()
             losses.append(loss_fn(pred, labels).item())
             num_speech, num_non_speech = get_class_freq(labels)
             frames_seen += num_non_speech + num_speech
@@ -117,7 +116,9 @@ def get_probe_feat_dim(probe_layer, model_name):
     dataset = MultiClassDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     mels, *_ = next(iter(dataloader))
-    whisper_model = Wav2VecActivationCache(layer_idx_to_cache=probe_layer)
+    whisper_model = WhisperActivationCache(
+        activations_to_cache=probe_layer, model_name=model_name
+    )
     whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
         f"{probe_layer}.output"
@@ -129,7 +130,6 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    dist_logging(f"here {global_rank}", rank=global_rank)
     fd = get_probe_feat_dim(FLAGS.probe_layer, FLAGS.whisper_model)
     model = Probe(feat_dim=fd).to(device)
     if FLAGS.n_devices > 1:
@@ -188,8 +188,8 @@ def train(FLAGS, global_rank=0):
             )
         )
 
-    whisper_model = Wav2VecActivationCache(
-        layer_idx_to_cache=FLAGS.probe_layer,
+    whisper_model = WhisperActivationCache(
+        activations_to_cache=FLAGS.probe_layer, model_name=FLAGS.whisper_model
     )
 
     # Object that contains the main state of the train loop
@@ -237,12 +237,13 @@ def train(FLAGS, global_rank=0):
                 activations = whisper_model.activations[
                     f"{FLAGS.probe_layer}.output"
                 ].to(device)
+                activations = activations.mean(dim=1)
                 whisper_model.reset_state()
                 pred = dist_model(activations)
-                labels = resample_labels(labels, pred)
+                # labels = resample_labels(labels, pred)
                 forward_time += perf_counter() - start_time
-                pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
-                loss = loss_fn(pred, labels)
+                # pred = torch.permute(pred, (0, 2, 1))  # bsz, n_classes, seq_len
+                loss = loss_fn(pred, labels[:, 0].long())
                 losses.append(loss.item())
                 meta.snapshot_memory_usage("mem_fwd")
 

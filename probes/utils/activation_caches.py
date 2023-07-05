@@ -13,10 +13,10 @@ class WhisperActivationCache(BaseActivationModule):
     def __init__(
         self,
         model_name: str = "tiny",
-        activations_to_cache: list = ["encoder.blocks.0"],
+        activations_to_cache: list = ["encoder.blocks.0"], # pass "all" to cache all activations
     ):
         self.model = whisper.load_model(model_name).to(device)
-        self.activations_to_cache = [activations_to_cache]
+        self.activations_to_cache = activations_to_cache
         self.named_modules = list(
             {name: mod for name, mod in self.model.named_modules()}
         )

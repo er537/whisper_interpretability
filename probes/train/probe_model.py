@@ -6,7 +6,7 @@ class Probe(nn.Module):
         super().__init__()
         self.w1 = nn.Linear(feat_dim, outdim, bias=False)
         # self.w2 = nn.Linear(1500, 1, bias=False)
-        self.softmax = nn.Softmax(dim=2)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.w1(x)
