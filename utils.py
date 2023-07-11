@@ -108,13 +108,19 @@ class BaseActivationModule(ABC):
         def hook(module, input, output):
             output_ = output.detach().cpu()
             input_ = input[0].detach().cpu()
-            if f"{name}.input" not in self.activations:
-                # only cache first pass
-                with torch.no_grad():
+            with torch.no_grad():
+                if f"{name}.input" not in self.activations:
                     self.activations[f"{name}.input"] = input_
-            if f"{name}.output" not in self.activations:
-                with torch.no_grad():
+                else:
+                    self.activations[f"{name}.input"] = torch.cat(
+                        (self.activations[f"{name}.input"], input_), dim=1
+                    )
+                if f"{name}.output" not in self.activations:
                     self.activations[f"{name}.output"] = output_
+                else:
+                    self.activations[f"{name}.output"] = torch.cat(
+                        (self.activations[f"{name}.output"], output_), dim=1
+                    )
 
         return hook
 

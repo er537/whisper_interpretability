@@ -9,6 +9,7 @@ from probes.utils.activation_caches import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset
 
 OUT_DIR = "/exp/ellenar/whisper_activations"
+LANG_CODE = "de"
 
 
 def get_activations(
@@ -19,9 +20,9 @@ def get_activations(
         "encoder.blocks.3.mlp.1",
     ],
     num_samples: int = 100,
-    class_label: str = "fr",
+    class_label: str = LANG_CODE,
     model_name: str = "tiny",
-    sql_path: str = "/home/ellenar/probes/just_fr_val.sql",
+    sql_path: str = f"/home/ellenar/probes/just_{LANG_CODE}_val.sql",
 ):
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")

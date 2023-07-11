@@ -12,9 +12,13 @@ class SteeringModule:
         activations_to_steer: list,
         model_name: str = "tiny",
         steering_factor: float = 1.0,
+        class_labels: list = [
+            "fr",
+            "de",
+        ],  # first is the class you would like to steer it towards, second is the true class
     ):
         self.model_name = model_name
-        self.class_labels = ["fr", "de"]
+        self.class_labels = class_labels
         self.model = whisper.load_model(model_name).to(device)
         self.activations_to_steer = activations_to_steer
         self.activation_dir = "/exp/ellenar/whisper_activations"
@@ -58,13 +62,16 @@ class SteeringModule:
             hook.remove()
 
 
-def get_steering_hook(pos_mean, neg_mean, steering_factor):
+def get_steering_hook(steering_cls_vector, true_cls_vector, steering_factor):
     def hook(module, input, output):
+        """
+        Add the 'steering' class vector and subtract the 'true' class vector
+        """
         output_ = output.detach()
         return (
             output_
-            + steering_factor * pos_mean.half().to(device)
-            - steering_factor * neg_mean.half().to(device)
+            + steering_factor * steering_cls_vector.half().to(device)
+            - steering_factor * true_cls_vector.half().to(device)
         )
 
     return hook
