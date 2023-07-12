@@ -67,6 +67,7 @@ class MultiHeadAttention(nn.Module):
         self.key = Linear(n_state, n_state, bias=False)
         self.value = Linear(n_state, n_state)
         self.out = Linear(n_state, n_state)
+        self.attn_hook = nn.Identity()
 
     def forward(
         self,
@@ -105,6 +106,7 @@ class MultiHeadAttention(nn.Module):
         qk = qk.float()
 
         w = F.softmax(qk, dim=-1).to(q.dtype)
+        w = self.attn_hook(w)
         return (w @ v).permute(0, 2, 1, 3).flatten(start_dim=2), qk.detach()
 
 

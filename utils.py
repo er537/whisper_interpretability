@@ -14,6 +14,7 @@ import threading
 from absl import logging
 import time
 import sys
+from typing import Callable
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -82,13 +83,19 @@ def load_audio(file: str, sample_rate_hz: int = 16_000):
 
 
 class BaseActivationModule(ABC):
-    def __init__(self, model: torch.nn.Module, activations_to_cache: str = "all"):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        activations_to_cache: list = ["all"],
+        hook_fn: Callable = None,
+    ):
         assert model is not None, "no model found"
         self.model = model
         self.step = 0
         self.activations = {}
         self.hooks = []
         self.activations_to_cache = activations_to_cache
+        self.hook_fn = hook_fn
 
     def forward(self, x: torch.tensor):
         self.model.zero_grad()
@@ -101,26 +108,24 @@ class BaseActivationModule(ABC):
     def register_hooks(self):
         for name, module in self.model.named_modules():
             if name in self.activations_to_cache or self.activations_to_cache == "all":
-                forward_hook = module.register_forward_hook(self._get_hook(name))
+                hook_fn = (
+                    self.hook_fn
+                    if self.hook_fn is not None
+                    else self._get_caching_hook(name)
+                )
+                forward_hook = module.register_forward_hook(hook_fn)
                 self.hooks.append(forward_hook)
 
-    def _get_hook(self, name):
+    def _get_caching_hook(self, name):
         def hook(module, input, output):
-            output_ = output.detach().cpu()
+            if len(output) > 1:
+                output_ = output[0].detach().cpu()
+            else:
+                output_ = output.detach().cpu()
             input_ = input[0].detach().cpu()
             with torch.no_grad():
-                if f"{name}.input" not in self.activations:
+                if input_.shape == torch.Size([1, 6, 3, 1500]):
                     self.activations[f"{name}.input"] = input_
-                else:
-                    self.activations[f"{name}.input"] = torch.cat(
-                        (self.activations[f"{name}.input"], input_), dim=1
-                    )
-                if f"{name}.output" not in self.activations:
-                    self.activations[f"{name}.output"] = output_
-                else:
-                    self.activations[f"{name}.output"] = torch.cat(
-                        (self.activations[f"{name}.output"], output_), dim=1
-                    )
 
         return hook
 

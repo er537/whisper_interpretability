@@ -1,6 +1,7 @@
 import torch
 import whisper
 import torchaudio
+from typing import Callable
 
 from utils import device, BaseActivationModule
 
@@ -13,14 +14,22 @@ class WhisperActivationCache(BaseActivationModule):
     def __init__(
         self,
         model_name: str = "tiny",
-        activations_to_cache: list = ["encoder.blocks.0"], # pass "all" to cache all activations
+        activations_to_cache: list = [
+            "encoder.blocks.0"
+        ],  # pass "all" to cache all activations
+        model: torch.nn.Module = None,
+        hook_fn: Callable = None,
     ):
-        self.model = whisper.load_model(model_name).to(device)
+        self.model = (
+            model.to(device)
+            if model is not None
+            else whisper.load_model(model_name).to(device)
+        )
         self.activations_to_cache = activations_to_cache
         self.named_modules = list(
             {name: mod for name, mod in self.model.named_modules()}
         )
-        super().__init__(self.model, self.activations_to_cache)
+        super().__init__(self.model, self.activations_to_cache, hook_fn=hook_fn)
 
     def custom_forward(self, model: torch.nn.Module, mels) -> dict:
         options = whisper.DecodingOptions(
