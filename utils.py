@@ -1,4 +1,5 @@
 import torch
+import whisper
 from abc import ABC, abstractmethod
 from subprocess import CalledProcessError, run
 import numpy as np
@@ -23,6 +24,22 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 def dist_logging(message, rank=0):
     if rank == 0:
         logging.info(message)
+
+
+def get_mels_from_dblx(dblx_path, num_samples):
+    batch_mels = []
+    with open(dblx_path, "r") as f:
+        for _ in range(num_samples):
+            line = f.readline().split(" ")
+            audio_path = line[1]
+            start_time = float(line[2])
+            end_time = float(line[3])
+            audio = load_audio(audio_path)
+            audio = trim_audio(audio, start_time=start_time, end_time=end_time)
+            audio = whisper.pad_or_trim(audio.flatten())
+            mels = torch.tensor(whisper.log_mel_spectrogram(audio)).to(device)
+            batch_mels.append(mels)
+    return torch.stack(batch_mels, dim=0)
 
 
 def trim_audio(
@@ -122,10 +139,7 @@ class BaseActivationModule(ABC):
                 output_ = output[0].detach().cpu()
             else:
                 output_ = output.detach().cpu()
-            input_ = input[0].detach().cpu()
-            with torch.no_grad():
-                if input_.shape == torch.Size([1, 6, 3, 1500]):
-                    self.activations[f"{name}.input"] = input_
+            self.activations[f"{name}"] = output_
 
         return hook
 

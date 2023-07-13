@@ -93,7 +93,7 @@ def validate(
 
         with torch.no_grad() and autocast():
             whisper_model.forward(data)
-            activations = whisper_model.activations[f"{probe_layer}.output"].to(device)
+            activations = whisper_model.activations[f"{probe_layer}"].to(device)
             whisper_model.reset_state()
             activations = activations.mean(dim=1)
             pred = model(activations)
@@ -121,7 +121,7 @@ def get_probe_feat_dim(probe_layer, model_name):
     )
     whisper_model.forward(mels.to(device))
     activations_shape = whisper_model.activations[
-        f"{probe_layer}.output"
+        f"{probe_layer}"
     ].shape  # (bsz, seq_len, d_model)
     return activations_shape[-1]
 
@@ -234,9 +234,9 @@ def train(FLAGS, global_rank=0):
             with autocast():
                 start_time = perf_counter()
                 whisper_model.forward(data)
-                activations = whisper_model.activations[
-                    f"{FLAGS.probe_layer}.output"
-                ].to(device)
+                activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(
+                    device
+                )
                 activations = activations.mean(dim=1)
                 whisper_model.reset_state()
                 pred = dist_model(activations)

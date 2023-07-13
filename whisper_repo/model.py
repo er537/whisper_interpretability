@@ -68,6 +68,7 @@ class MultiHeadAttention(nn.Module):
         self.value = Linear(n_state, n_state)
         self.out = Linear(n_state, n_state)
         self.attn_hook = nn.Identity()
+        self.wv_hook = nn.Identity()
 
     def forward(
         self,
@@ -107,7 +108,8 @@ class MultiHeadAttention(nn.Module):
 
         w = F.softmax(qk, dim=-1).to(q.dtype)
         w = self.attn_hook(w)
-        return (w @ v).permute(0, 2, 1, 3).flatten(start_dim=2), qk.detach()
+        wv = self.wv_hook((w @ v).permute(0, 2, 1, 3).flatten(start_dim=2))
+        return wv, qk.detach()
 
 
 class ResidualAttentionBlock(nn.Module):
