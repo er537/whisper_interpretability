@@ -15,10 +15,20 @@ DBLX_DICT = {
 }  # file_path, lang_code
 NUM_SAMPLES = 10
 NUM_LAYERS = 4
+NUM_HEADS = 6
 
 
-def hook_fn(module, input, output):
+def layerwise_hook_fn(module, input, output):
     return torch.zeros_like(output[0])
+
+
+def get_headwise_hook(head_idx):
+    def hook_fn(module, input, output):
+        if head_idx is not None:
+            output[:, :, head_idx, :] = torch.zeros_like(output[:, :, head_idx, :])
+        return output
+
+    return hook_fn
 
 
 def get_layerwise_scores():
@@ -32,7 +42,7 @@ def get_layerwise_scores():
         actv_mod = WhisperActivationCache(
             model=hacked_model,
             activations_to_cache=[f"decoder.blocks.{layer}.cross_attn"],
-            hook_fn=hook_fn,
+            hook_fn=layerwise_hook_fn,
         )
         for dblx_path, lang_code in DBLX_DICT.items():
             mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
@@ -46,6 +56,33 @@ def get_layerwise_scores():
     return score_dict
 
 
+def get_headwise_scores():
+    whisper_model = whisper.load_model("tiny")
+    ModelDims = whisper_model.dims
+    hacked_model = Whisper(ModelDims)
+    hacked_model.load_state_dict(whisper_model.state_dict())
+    score_dict = {}  # layer_name, score
+    # First get the baseline
+
+    for head_idx in [None] + list(range(NUM_HEADS)):
+        head_scores = []
+        actv_mod = WhisperActivationCache(
+            model=hacked_model,
+            activations_to_cache=[f"decoder.blocks.0.cross_attn.wv_hook"],
+            hook_fn=get_headwise_hook(head_idx),
+        )
+        for dblx_path, lang_code in DBLX_DICT.items():
+            mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
+            output = actv_mod.forward(mels.to(device))
+            actv_mod.reset_state()
+            lang_probs = [
+                output[i].language_probs[lang_code] for i in range(len(output))
+            ]
+            head_scores.append(sum(lang_probs) / len(lang_probs))
+        score_dict[head_idx] = sum(head_scores) / len(head_scores)
+    return score_dict
+
+
 if __name__ == "__main__":
-    score_dict = get_layerwise_scores()
+    score_dict = get_headwise_scores()
     print(score_dict)

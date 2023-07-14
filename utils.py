@@ -135,10 +135,7 @@ class BaseActivationModule(ABC):
 
     def _get_caching_hook(self, name):
         def hook(module, input, output):
-            if len(output) > 1:
-                output_ = output[0].detach().cpu()
-            else:
-                output_ = output.detach().cpu()
+            output_ = output.detach().cpu()
             self.activations[f"{name}"] = output_
 
         return hook

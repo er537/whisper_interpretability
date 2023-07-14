@@ -1,9 +1,7 @@
-from functools import partial
-from math import inf
-from time import perf_counter
-
 import numpy as np
 import torch
+import whisper
+
 from absl import app, flags, logging
 from torch.cuda.amp import autocast
 from torch.optim import RAdam
@@ -11,6 +9,9 @@ from torch.nn.functional import interpolate
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
+from functools import partial
+from math import inf
+from time import perf_counter
 
 from probes.train.dataset import MultiClassDataset, collate_fn
 from probes.utils.activation_caches import (
@@ -30,6 +31,7 @@ from utils import (
     snapshot_memory_usage,
     dist_logging,
 )
+from whisper_repo.model import Whisper
 
 torch.backends.cudnn.benchmark = True
 logging.set_verbosity(logging.INFO)
@@ -56,6 +58,9 @@ flags.DEFINE_integer(
     "used to determine the number of training steps if not specified",
 )
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
+flags.DEFINE_integer(
+    "head_idx", None, "if not None, will use that specific attn head output"
+)
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
 flags.DEFINE_integer("val_samples", 100, "Number of samples to validate on")
 flags.DEFINE_integer("num_train_samples", 2297662, "Number of samples in train dataset")
@@ -76,14 +81,20 @@ def resample_labels(labels, pred):
 
 
 def validate(
-    val_data, val_samples, probe_layer, model, whisper_model, loss_fn, dataloader_args
+    FLAGS,
+    model,
+    whisper_model,
+    loss_fn,
+    dataloader_args,
 ):
     model.eval()
     losses = []
     frames_seen = 0
     accs = []
 
-    val_dataset = MultiClassDataset(sql_path=val_data, num_entries=val_samples)
+    val_dataset = MultiClassDataset(
+        sql_path=FLAGS.val_data, num_entries=FLAGS.val_samples
+    )
     val_loader = iter(
         torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args)
     )
@@ -93,7 +104,9 @@ def validate(
 
         with torch.no_grad() and autocast():
             whisper_model.forward(data)
-            activations = whisper_model.activations[f"{probe_layer}"].to(device)
+            activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(device)
+            if FLAGS.head_idx is not None:
+                activations = activations[:, :, FLAGS.head_idx, :]
             whisper_model.reset_state()
             activations = activations.mean(dim=1)
             pred = model(activations)
@@ -112,25 +125,30 @@ def validate(
     return np.array(losses).mean(), np.array(accs).mean(), frames_seen
 
 
-def get_probe_feat_dim(probe_layer, model_name):
+def get_probe_feat_dim(probe_layer, model, head_idx):
     dataset = MultiClassDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     mels, *_ = next(iter(dataloader))
     whisper_model = WhisperActivationCache(
-        activations_to_cache=probe_layer, model_name=model_name
+        activations_to_cache=[probe_layer], model=model
     )
     whisper_model.forward(mels.to(device))
-    activations_shape = whisper_model.activations[
-        f"{probe_layer}"
-    ].shape  # (bsz, seq_len, d_model)
-    return activations_shape[-1]
+    activations = whisper_model.activations[f"{probe_layer}"]
+    if head_idx is not None:
+        activations = activations[:, :, head_idx, :]
+    return activations.shape[-1]  # (bsz, seq_len, d_model)
 
 
 def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
-
-    fd = get_probe_feat_dim(FLAGS.probe_layer, FLAGS.whisper_model)
+    whisper_orig_model = whisper.load_model(FLAGS.whisper_model)
+    hacked_model = Whisper(whisper_orig_model.dims)
+    hacked_model.load_state_dict(whisper_orig_model.state_dict())
+    whisper_model = WhisperActivationCache(
+        activations_to_cache=[FLAGS.probe_layer], model=hacked_model
+    )
+    fd = get_probe_feat_dim(FLAGS.probe_layer, hacked_model, FLAGS.head_idx)
     model = Probe(feat_dim=fd).to(device)
     if FLAGS.n_devices > 1:
         dist_model = DDP(model, device_ids=[global_rank])
@@ -188,10 +206,6 @@ def train(FLAGS, global_rank=0):
             )
         )
 
-    whisper_model = WhisperActivationCache(
-        activations_to_cache=FLAGS.probe_layer, model_name=FLAGS.whisper_model
-    )
-
     # Object that contains the main state of the train loop
     state = {
         "model": model,
@@ -237,6 +251,8 @@ def train(FLAGS, global_rank=0):
                 activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(
                     device
                 )
+                if FLAGS.head_idx is not None:
+                    activations = activations[:, :, FLAGS.head_idx, :]
                 activations = activations.mean(dim=1)
                 whisper_model.reset_state()
                 pred = dist_model(activations)
@@ -308,9 +324,7 @@ def train(FLAGS, global_rank=0):
         if state["step"] % FLAGS.val_every == 0 and global_rank == 0:
             dist_logging("Starting to validate", rank=global_rank)
             val_loss, val_acc, val_frames_seen = validate(
-                FLAGS.val_data,
-                FLAGS.val_samples,
-                FLAGS.probe_layer,
+                FLAGS,
                 model,
                 whisper_model,
                 loss_fn,

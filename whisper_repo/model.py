@@ -108,8 +108,8 @@ class MultiHeadAttention(nn.Module):
 
         w = F.softmax(qk, dim=-1).to(q.dtype)
         w = self.attn_hook(w)
-        wv = self.wv_hook((w @ v).permute(0, 2, 1, 3).flatten(start_dim=2))
-        return wv, qk.detach()
+        wv = self.wv_hook((w @ v).permute(0, 2, 1, 3))
+        return wv.flatten(start_dim=2), qk.detach()
 
 
 class ResidualAttentionBlock(nn.Module):

@@ -5,7 +5,7 @@ set -euo pipefail
 WORK_ROOT=
 WORK_DIR=
 
-JOB_QUEUE="aml-gpu.q@b1,aml-gpu.q@b2,aml-gpu.q@b3"
+JOB_QUEUE="aml-gpu.q@b1,aml-gpu.q@b2,aml-gpu.q@b3,aml-gpu.q@b5"
 JOB_NAME=
 JOB_REASON=
 experiment_suffix=
@@ -17,7 +17,7 @@ lr=4e-4
 batch_size=50
 n_gpus_per_node=2
 steps=1000
-grad_acc_steps=1
+grad_acc_steps=2
 
 #Logging
 log_every=10
@@ -28,6 +28,7 @@ test_pr_every=
 
 whisper_model=tiny
 probe_layer='encoder.blocks.3'
+head_idx=
 val_samples=100
 
 . parse_options.sh || exit 1;
@@ -37,7 +38,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/langid_probes/train}
-experiment_suffix=${experiment_suffix:-average_activations_whisper_${probe_layer}}
+experiment_suffix=${experiment_suffix:-whisper_${whisper_model}_${probe_layer}_head_${head_idx}}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training LangID"}"
 model_out_dir=${WORK_DIR}/models
@@ -108,6 +109,7 @@ if [[ ! -f ${WORK_DIR}/done_train ]]; then
     --checkpoint_out ${model_out_dir}/checkpoint.pt \
     --model_out ${model_out_dir}/model.ts \
     --probe_layer $probe_layer \
+    $([ ! -z $head_idx ] && echo "--head_idx=${head_idx}") \
     --whisper_model $whisper_model \
     --val_samples $val_samples
       ret_val="\$?"
