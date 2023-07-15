@@ -294,9 +294,9 @@ def train(FLAGS, global_rank=0):
                     attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
                 whisper_model.reset_state()
                 pred = dist_model(activations)  # bsz, seq_len, n_classes
-                labels = resample_labels(labels, pred.permute(0, 2, 1))
+                labels = resample_labels(labels, pred)
                 forward_time += perf_counter() - start_time
-                loss = loss_fn(pred, labels.long())
+                loss = loss_fn(pred.permute(0, 2, 1), labels.long())
                 losses.append(loss.item())
                 meta.snapshot_memory_usage("mem_fwd")
 
