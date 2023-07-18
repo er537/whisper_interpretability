@@ -1,0 +1,5 @@
+absl-py
+openai-whisper
+torch
+torchvision
+torchaudio
