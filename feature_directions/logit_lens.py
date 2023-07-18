@@ -7,7 +7,7 @@ from rich.console import Console
 
 from whisper_repo import Whisper
 from probes.utils.activation_caches import WhisperActivationCache
-from utils import get_mels_from_dblx, device
+from util import get_mels_from_dblx, device
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)

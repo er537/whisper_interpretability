@@ -3,7 +3,7 @@ import whisper
 
 from probes.train.dataset import MultiClassDataset
 from probes.utils.activation_caches import WhisperActivationCache
-from utils import device, get_mels_from_dblx
+from util import device, get_mels_from_dblx
 
 DBLX_DICT = {
     "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/train.dblx": "de",

@@ -40,7 +40,8 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/langid_probes/train}
-experiment_suffix=${experiment_suffix:-whisper_${whisper_model}_${probe_layer}_head_${head_idx}_top${topk_attn}_attn}
+# experiment_suffix=${experiment_suffix:-whisper_${whisper_model}_${probe_layer}}
+experiment_suffix=${experiment_suffix:-whisper_${whisper_model}_${probe_layer}_topk_attn_${topk_attn}}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training LangID"}"
 model_out_dir=${WORK_DIR}/models

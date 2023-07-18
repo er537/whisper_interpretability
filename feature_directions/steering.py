@@ -3,7 +3,7 @@ import whisper
 import torch
 from collections import defaultdict
 
-from utils import device
+from util import device
 
 
 class SteeringModule:

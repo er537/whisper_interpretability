@@ -4,20 +4,19 @@ import warnings
 import fire
 import pathlib
 
-from utils import device
+from util import device
 from probes.utils.activation_caches import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset
 
 OUT_DIR = "/exp/ellenar/whisper_activations"
 LANG_CODE = "de"
 
-
 def get_activations(
     activations_to_cache: list = [
-        "encoder.blocks.0.mlp.1",
-        "encoder.blocks.1.mlp.1",
-        "encoder.blocks.2.mlp.1",
-        "encoder.blocks.3.mlp.1",
+        "decoder.blocks.0.cross_attn.out",
+        "decoder.blocks.1.cross_attn.out",
+        "decoder.blocks.2.cross_attn.out",
+        "decoder.blocks.3.cross_attn.out",
     ],
     num_samples: int = 100,
     class_label: str = LANG_CODE,

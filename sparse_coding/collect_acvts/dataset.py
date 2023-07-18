@@ -11,7 +11,7 @@ warnings.filterwarnings(
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
 
-from utils import load_audio, trim_audio, dict_hash
+from util import load_audio, trim_audio, dict_hash
 
 DBLX_DICT = {
     "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/train.dblx": "de",
@@ -38,8 +38,9 @@ def init_sql(sql_path):
 
 
 def collate_fn(batch):
-    data = torch.stack([x.permute(1, 0) for x in batch], dim=0)
-    return data, data
+    data = torch.stack([x[0].permute(1, 0) for x in batch], dim=0)
+    lang_codes = [x[1] for x in batch]
+    return data, lang_codes
 
 
 class WhisperMelsDataset(torch.utils.data.Dataset):
@@ -99,15 +100,21 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         return len(cur.fetchall())
 
     def __getitem__(self, idx):
-        audio_path, label, start_time, end_time = self.conn.execute(
+        audio_path, lang_code, start_time, end_time = self.conn.execute(
             "SELECT audio_path, label, start_time, end_time FROM data WHERE key = ? LIMIT 1",
             (idx,),
         ).fetchone()
         audio = load_audio(audio_path)
         trimmed_audio = trim_audio(audio, float(start_time), float(end_time))
         x, non_padded_frac = self._get_mels(torch.tensor(trimmed_audio))
-        return x
+        return x, lang_code
 
     def __len__(self):
         results = self.conn.execute("SELECT * from data").fetchall()
         return len(results)
+
+
+def get_out_path(audio_path, lang_code):
+    """
+    Use the dirname, basename and lang_code to form a unique file path extension
+    """

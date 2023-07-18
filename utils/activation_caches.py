@@ -3,7 +3,7 @@ import whisper
 import torchaudio
 from typing import Callable
 
-from utils import device, BaseActivationModule
+from util import device, BaseActivationModule
 
 
 class WhisperActivationCache(BaseActivationModule):

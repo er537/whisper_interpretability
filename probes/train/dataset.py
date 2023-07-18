@@ -9,7 +9,7 @@ warnings.filterwarnings(
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
 
-from utils import load_audio, trim_audio
+from util import load_audio, trim_audio
 
 
 def collate_fn(batch):

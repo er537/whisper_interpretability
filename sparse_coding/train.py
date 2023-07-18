@@ -15,7 +15,6 @@ from time import perf_counter
 
 from probes.train.dataset import MultiClassDataset, collate_fn
 from utils.activation_caches import WhisperActivationCache
-from probes.train.probe_model import Probe
 from probes.train.base_train import train_init
 from util import (
     load_checkpoint,
@@ -109,15 +108,26 @@ def validate(
                 # Only use the topk attention score sequence positions
                 attn_scores = whisper_model.activations[
                     "decoder.blocks.1.cross_attn.attn_hook"
-                ].permute(0, 3, 1, 2)
+                ].to(device)
                 activations = activations.view(
-                    *activations.shape[:2], attn_scores.shape[2], -1
+                    *activations.shape[:2], attn_scores.shape[1], -1
+                ).permute(0, 2, 1, 3)
+                attn_scores, attn_indxs = torch.topk(
+                    attn_scores.float(), dim=-1, k=FLAGS.topk_attn
                 )
-                _, attn_indxs = torch.topk(
-                    attn_scores.float(), dim=1, k=FLAGS.topk_attn
+                attn_indxs = attn_indxs.permute(0, 1, 3, 2).repeat(
+                    1, 1, 1, activations.shape[-1]
                 )
-                attn_indxs = attn_indxs.repeat(1, 1, activations.shape[-1]).long()
-                activations = activations.gather(1, attn_indxs.to(device))
+                activations = activations.gather(2, attn_indxs.to(device))
+                activations = (
+                    (attn_scores @ activations).permute(0, 2, 1, 3).flatten(start_dim=2)
+                )
+
+            # head_idxs = [1, 5]
+            # actvs = []
+            # for head_idx in head_idxs:
+            #     actvs.append(activations[:, :, head_idx, :].unsqueeze(dim=2))
+            # activations = torch.stack(actvs, dim=2).flatten(start_dim=2)
             if FLAGS.head_idx is not None:
                 activations = activations[:, :, FLAGS.head_idx, :]
                 attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
@@ -147,11 +157,16 @@ def get_probe_feat_dim(probe_layer, model, topk_attn):
     )
     whisper_model.forward(mels.to(device))
     activations = whisper_model.activations[f"{probe_layer}"]
-    if topk_attn is not None:
-        attn_scores = whisper_model.activations[
-            "decoder.blocks.1.cross_attn.attn_hook"
-        ].permute(0, 3, 1, 2)
-        activations = activations.view(*activations.shape[:2], attn_scores.shape[2], -1)
+    # if topk_attn is not None:
+    #     attn_scores = whisper_model.activations[
+    #         "decoder.blocks.1.cross_attn.attn_hook"
+    #     ].permute(0, 3, 1, 2)
+    #     activations = activations.view(*activations.shape[:2], attn_scores.shape[2], -1)
+    # head_idxs = [1, 5]
+    # actvs = []
+    # for head_idx in head_idxs:
+    #     actvs.append(activations[:, :, head_idx, :].unsqueeze(dim=2))
+    # activations = torch.stack(actvs, dim=2).flatten(start_dim=2)
     return activations.shape[-1]  # (bsz, seq_len, n_heads, head_dim)
 
 
@@ -168,9 +183,9 @@ def train(FLAGS, global_rank=0):
         ],
         model=hacked_model,
     )
-    fd = get_probe_feat_dim(FLAGS.probe_layer, hacked_model, FLAGS.head_idx)
+    fd = get_probe_feat_dim(FLAGS.probe_layer, hacked_model, FLAGS.topk_attn)
     assert FLAGS.topk_attn is None or FLAGS.seq_len is None
-    seq_len = FLAGS.topk_attn if FLAGS.topk_attn is not None else FLAGS.seq_len
+    seq_len = FLAGS.seq_len
     model = Probe(feat_dim=fd, seq_len=seq_len).to(device)
     if FLAGS.n_devices > 1:
         dist_model = DDP(model, device_ids=[global_rank])
@@ -277,16 +292,27 @@ def train(FLAGS, global_rank=0):
                     # Only use the topk attention score sequence positions
                     attn_scores = whisper_model.activations[
                         "decoder.blocks.1.cross_attn.attn_hook"
-                    ].permute(0, 3, 1, 2)
+                    ].to(device)
                     activations = activations.view(
-                        *activations.shape[:2], attn_scores.shape[2], -1
+                        *activations.shape[:2], attn_scores.shape[1], -1
+                    ).permute(0, 2, 1, 3)
+                    attn_scores, attn_indxs = torch.topk(
+                        attn_scores.float(), dim=-1, k=FLAGS.topk_attn
                     )
-
-                    _, attn_indxs = torch.topk(
-                        attn_scores.float(), dim=1, k=FLAGS.topk_attn
+                    attn_indxs = attn_indxs.permute(0, 1, 3, 2).repeat(
+                        1, 1, 1, activations.shape[-1]
                     )
-                    attn_indxs = attn_indxs.repeat(1, 1, activations.shape[-1]).long()
-                    activations = activations.gather(1, attn_indxs.to(device))
+                    activations = activations.gather(2, attn_indxs.to(device))
+                    activations = (
+                        (attn_scores @ activations)
+                        .permute(0, 2, 1, 3)
+                        .flatten(start_dim=2)
+                    )
+                # head_idxs = [1, 5]
+                # actvs = []
+                # for head_idx in head_idxs:
+                #     actvs.append(activations[:, :, head_idx, :].unsqueeze(dim=2))
+                # activations = torch.stack(actvs, dim=2).flatten(start_dim=2)
                 if FLAGS.head_idx is not None:
                     activations = activations[:, :, FLAGS.head_idx, :]
                     attn_scores = attn_scores[:, :, FLAGS.head_idx, :]

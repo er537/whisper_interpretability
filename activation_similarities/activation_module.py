@@ -2,7 +2,7 @@ import torch
 import whisper_repo
 
 from activation_similarities.dataset import ClasswiseDataset
-from utils import device, BaseActivationModule
+from util import device, BaseActivationModule
 
 
 class WhipserActivationModule(BaseActivationModule):

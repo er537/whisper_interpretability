@@ -2,7 +2,7 @@ import torch
 import whisper
 
 from whisper_repo.model import Whisper
-from utils import device, get_mels_from_dblx
+from util import device, get_mels_from_dblx
 from probes.utils.activation_caches import WhisperActivationCache
 
 
