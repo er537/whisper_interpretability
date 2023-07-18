@@ -33,9 +33,7 @@ class WhisperActivationCache(BaseActivationModule):
 
     def custom_forward(self, model: torch.nn.Module, mels) -> dict:
         options = whisper.DecodingOptions(
-            without_timestamps=False,
-            fp16=(device == "cuda"),
-            task="lang_id",
+            without_timestamps=False, fp16=(device == "cuda")
         )
         output = model.decode(mels, options)
         return output

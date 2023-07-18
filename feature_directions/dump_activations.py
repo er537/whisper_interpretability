@@ -5,7 +5,7 @@ import fire
 import pathlib
 
 from util import device
-from probes.utils.activation_caches import WhisperActivationCache
+from utils.activation_caches import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset
 
 OUT_DIR = "/exp/ellenar/whisper_activations"

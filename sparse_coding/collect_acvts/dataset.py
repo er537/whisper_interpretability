@@ -40,7 +40,8 @@ def init_sql(sql_path):
 def collate_fn(batch):
     data = torch.stack([x[0].permute(1, 0) for x in batch], dim=0)
     lang_codes = [x[1] for x in batch]
-    return data, lang_codes
+    audio_paths = [x[2] for x in batch]
+    return data, lang_codes, audio_paths
 
 
 class WhisperMelsDataset(torch.utils.data.Dataset):
@@ -107,7 +108,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         audio = load_audio(audio_path)
         trimmed_audio = trim_audio(audio, float(start_time), float(end_time))
         x, non_padded_frac = self._get_mels(torch.tensor(trimmed_audio))
-        return x, lang_code
+        return x, lang_code, audio_path
 
     def __len__(self):
         results = self.conn.execute("SELECT * from data").fetchall()

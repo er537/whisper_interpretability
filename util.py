@@ -149,7 +149,12 @@ class BaseActivationModule(ABC):
     def _get_caching_hook(self, name):
         def hook(module, input, output):
             output_ = output.detach().cpu()
-            self.activations[f"{name}"] = output_
+            if name in self.activations:
+                self.activations[f"{name}"] = torch.cat(
+                    (self.activations[f"{name}"], output_), dim=1
+                )
+            else:
+                self.activations[f"{name}"] = output_
 
         return hook
 
