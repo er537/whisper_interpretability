@@ -23,20 +23,6 @@ DBLX_DICT = {
 dblx_hash = dict_hash(DBLX_DICT)
 
 
-def init_sql(sql_path):
-    dir_path = os.path.dirname(sql_path)
-    if not os.path.isdir(dir_path):
-        os.mkdir(dir_path)
-    with sqlite.connect(f"{sql_path}") as conn:
-        create_str = (
-            "CREATE TABLE IF NOT EXISTS "
-            "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"
-        )
-        logging.info("Generating SQLITE db from utterances")
-        cur = conn.cursor()
-        cur.execute(create_str)
-
-
 def collate_fn(batch):
     data = torch.stack([x[0].permute(1, 0) for x in batch], dim=0)
     lang_codes = [x[1] for x in batch]
@@ -48,7 +34,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         max_num_entries: int = 10_000,
-        sql_path: str = f"/exp/ellenar/sparse_coding/data/train_{dict_hash}.sql",
+        sql_path: str = f"/exp/ellenar/sparse_coding/data/train_dbl.sql",
     ):
         super().__init__()
         self.max_num_entries = max_num_entries
@@ -58,7 +44,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         self.conn = sqlite.connect(sql_path)
 
     def _build_sql(self):
-        init_sql(self.sql_path)
+        self._init_sql(self.sql_path)
         total_entries = 0
         entries_per_class = self.max_num_entries // len(DBLX_DICT)
         with sqlite.connect(f"{self.sql_path}") as conn:
@@ -88,6 +74,19 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
                         if entries_in_class == entries_per_class:
                             break
         assert total_entries <= self.max_num_entries
+    
+    def _init_sql(self):
+        dir_path = os.path.dirname(self.sql_path)
+        if not os.path.isdir(dir_path):
+            os.mkdir(dir_path)
+        with sqlite.connect(f"{self.sql_path}") as conn:
+            create_str = (
+                "CREATE TABLE IF NOT EXISTS "
+                "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"
+            )
+            logging.info("Generating SQLITE db from utterances")
+            cur = conn.cursor()
+            cur.execute(create_str)
 
     def _get_mels(self, raw_audio):
         padded_audio = whisper_repo.pad_or_trim(raw_audio.flatten())
@@ -113,9 +112,3 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
     def __len__(self):
         results = self.conn.execute("SELECT * from data").fetchall()
         return len(results)
-
-
-def get_out_path(audio_path, lang_code):
-    """
-    Use the dirname, basename and lang_code to form a unique file path extension
-    """

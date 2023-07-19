@@ -16,7 +16,7 @@ from time import perf_counter
 from probes.train.dataset import MultiClassDataset, collate_fn
 from utils.activation_caches import WhisperActivationCache
 from probes.train.probe_model import Probe
-from probes.train.base_train import train_init
+from base_train import train_init
 from util import (
     load_checkpoint,
     save_checkpoint,
