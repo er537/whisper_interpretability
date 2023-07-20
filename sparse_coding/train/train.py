@@ -178,7 +178,14 @@ def train(FLAGS, global_rank=0):
         losses_recon = []
         losses_l1 = []
         for _ in range(FLAGS.grad_acc_steps):
-            activations = next(train_loader).to(device)
+            try:
+                activations = next(train_loader).to(device)
+            except:
+                train_loader = iter(
+                    torch.utils.data.DataLoader(
+                        train_dataset, shuffle=True, **dataloader_kwargs
+                    )
+                )
             # Forward pass
             with autocast():
                 start_time = perf_counter()
@@ -186,7 +193,7 @@ def train(FLAGS, global_rank=0):
                 forward_time += perf_counter() - start_time
                 loss_recon = recon_loss_fn(pred, activations)
                 loss_l1 = torch.norm(c, 1, dim=2).mean()
-                loss = loss_recon + FLAGS.l1_alpha*loss_l1
+                loss = loss_recon + FLAGS.l1_alpha * loss_l1
                 losses_recon.append(loss_recon.item())
                 losses_l1.append(loss_l1.item())
                 meta.snapshot_memory_usage("mem_fwd")
