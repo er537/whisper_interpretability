@@ -10,7 +10,7 @@ class AutoEncoder(nn.Module):
         self.n_dict_components = n_dict_components
 
         # Only defining the decoder layer, encoder will share its weights
-        self.decoder = nn.Linear(n_dict_components, activation_size, bias=True)
+        self.decoder = nn.Linear(n_dict_components, activation_size, bias=False)
         # Create a bias layer
         self.encoder_bias = nn.Parameter(torch.zeros(n_dict_components))
 
@@ -22,11 +22,11 @@ class AutoEncoder(nn.Module):
         self.encoder = nn.Sequential(nn.ReLU())
 
     def forward(self, x):
-        c = self.encoder(x @ self.decoder.weight + self.encoder_bias)
-        # Apply unit norm constraint to the decoder weights
         self.decoder.weight.data = nn.functional.normalize(
             self.decoder.weight.data, dim=0
         )
+        c = self.encoder(x @ self.decoder.weight + self.encoder_bias)
+        # Apply unit norm constraint to the decoder weights
 
         # Decoding step as before
         x_hat = self.decoder(c)

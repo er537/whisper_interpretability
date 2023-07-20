@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import whisper
 
 from absl import app, flags, logging
 from torch.cuda.amp import autocast
@@ -18,7 +17,6 @@ from base_train import train_init
 from util import (
     load_checkpoint,
     save_checkpoint,
-    save_model,
     Metadata,
     device,
     dump_checkpoint_on_kill,
@@ -27,7 +25,6 @@ from util import (
     snapshot_memory_usage,
     dist_logging,
 )
-from whisper_repo.model import Whisper
 
 torch.backends.cudnn.benchmark = True
 logging.set_verbosity(logging.INFO)
@@ -49,7 +46,7 @@ flags.DEFINE_float("clip_thresh", 1.0, "value to clip gradients to")
 flags.DEFINE_float("weight_decay", 0.0, "weight decay to use for training")
 
 # Sparse Coding hyperparams
-flags.DEFINE_string(
+flags.DEFINE_integer(
     "n_dict_components", None, "number of components in Sparse Dictionary"
 )
 flags.DEFINE_string(
@@ -57,11 +54,17 @@ flags.DEFINE_string(
     None,
     "which layer of the base models internal activations to use",
 )
+flags.DEFINE_float(
+    "l1_alpha", 1e-3, "multiplier for the l1 'sparsity' component of the loss"
+)
+flags.mark_flag_as_required("n_dict_components")
+flags.mark_flag_as_required("activation_layer")
 
 
 def validate(
     FLAGS,
     model,
+    recon_loss_fn,
     dataloader_args,
 ):
     model.eval()
@@ -73,12 +76,11 @@ def validate(
         torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args)
     )
     for activations in val_loader:
-        with torch.no_grad():
+        with torch.no_grad() and autocast():
+            activations = activations.to(device)
             pred, c = model(activations)
-            losses_recon.append(torch.nn.MSELoss()(pred, activations))
-            losses_l1.append(
-                FLAGS.l1_alpha * torch.norm(c, 1, dim=1).mean()
-            )  # TODO: check dimension
+            losses_recon.append(recon_loss_fn(pred, activations).item())
+            losses_l1.append(torch.norm(c, 1, dim=2).mean().item())
 
     model.train()
     return np.array(losses_recon).mean(), np.array(losses_l1).mean()
@@ -88,11 +90,9 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    train_dataset = ActivationDataset(
-        sql_path=FLAGS.train_data, num_entries=FLAGS.num_train_samples
-    )
+    train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
     feat_dim = next(iter(train_dataset)).shape[-1]
-    model = AutoEncoder(feat_dim, FLAGS.n_dict_components)
+    model = AutoEncoder(feat_dim, FLAGS.n_dict_components).to(device)
     if FLAGS.n_devices > 1:
         dist_model = DDP(model, device_ids=[global_rank])
         model = dist_model.module
@@ -171,6 +171,7 @@ def train(FLAGS, global_rank=0):
     # Set seeds so each rank gets different data
     set_seeds(FLAGS.seed + state["step"] + global_rank)
 
+    recon_loss_fn = torch.nn.MSELoss()
     while True:
         forward_time = 0
         backward_time = 0
@@ -180,15 +181,14 @@ def train(FLAGS, global_rank=0):
             activations = next(train_loader).to(device)
             # Forward pass
             with autocast():
+                start_time = perf_counter()
                 pred, c = dist_model(activations)  # bsz, seq_len, n_classes
                 forward_time += perf_counter() - start_time
-                loss_recon = torch.nn.MSELoss()(pred, activations)
-                loss_l1 = (
-                    FLAGS.l1_alpha * torch.norm(c, 1, dim=1).mean()
-                )  # TODO: check dimension
-                loss = losses_recon + losses_l1
+                loss_recon = recon_loss_fn(pred, activations)
+                loss_l1 = torch.norm(c, 1, dim=2).mean()
+                loss = loss_recon + FLAGS.l1_alpha*loss_l1
                 losses_recon.append(loss_recon.item())
-                losses_l1.append(losses_l1.item())
+                losses_l1.append(loss_l1.item())
                 meta.snapshot_memory_usage("mem_fwd")
 
                 # Backward pass
@@ -216,29 +216,11 @@ def train(FLAGS, global_rank=0):
             if state["step"] % FLAGS.log_tb_every == 0 and global_rank == 0:
                 tb_logger.add_scalar("train/loss", loss, state["step"])
                 tb_logger.add_scalar(
+                    "train/loss_recon", meta["loss_recon"], state["step"]
+                )
+                tb_logger.add_scalar("train/loss_l1", meta["loss_l1"], state["step"])
+                tb_logger.add_scalar(
                     "train/lr", scheduler.get_last_lr()[0], state["step"]
-                )
-                data_seen_hours = (
-                    (
-                        state["total_speech_seconds_seen"]
-                        + state["total_non_speech_seconds_seen"]
-                    )
-                    / 60.0
-                    / 60.0
-                )
-                speech_frac = (
-                    state["total_speech_seconds_seen"]
-                    / (
-                        state["total_non_speech_seconds_seen"]
-                        + state["total_speech_seconds_seen"]
-                    )
-                    * 100
-                )
-                tb_logger.add_scalar(
-                    "train/data_seen_(hrs)", data_seen_hours, state["step"]
-                )
-                tb_logger.add_scalar(
-                    "train/speech_percentage", speech_frac, state["step"]
                 )
                 # log timings but ignoring first step
                 if state["step"] > 1:
@@ -246,7 +228,6 @@ def train(FLAGS, global_rank=0):
 
         # save out model periodically
         if state["step"] % FLAGS.save_every == 0:
-            save_model(model, FLAGS.model_out + ".step" + str(state["step"]))
             save_checkpoint(state, FLAGS.checkpoint_out + ".step" + str(state["step"]))
 
         # validate periodically
@@ -255,6 +236,7 @@ def train(FLAGS, global_rank=0):
             val_loss_recon, val_loss_l1 = validate(
                 FLAGS,
                 model,
+                recon_loss_fn,
                 dataloader_kwargs,
             )
             dist_logging(
@@ -266,7 +248,6 @@ def train(FLAGS, global_rank=0):
             tb_logger.add_scalar("val/loss_l1", val_loss_l1, state["step"])
             if val_loss_recon.item() < state["best_val_loss"]:
                 dist_logging("Saving new best validation", rank=global_rank)
-                save_model(model, FLAGS.model_out + ".bestval")
                 state["best_val_loss"] = val_loss_recon.item()
                 save_checkpoint(state, FLAGS.checkpoint_out + ".bestval")
 
@@ -277,7 +258,7 @@ def train(FLAGS, global_rank=0):
         if FLAGS.steps != -1 and state["step"] >= FLAGS.steps:
             break
 
-    save_model(model, FLAGS.model_out)
+    save_checkpoint(state, FLAGS.checkpoint_out + ".step" + str(state["step"]))
 
 
 if __name__ == "__main__":

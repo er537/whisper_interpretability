@@ -1,5 +1,4 @@
 import torch
-from collections import defaultdict
 import warnings
 import fire
 import pathlib
@@ -12,8 +11,10 @@ from sparse_coding.collect_acvts.dataset import WhisperMelsDataset
 MODEL_NAME = "tiny"
 OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}"
 
-
 def get_activations(
+    max_num_entries: int,
+    split: str,  # train or val
+    sql_path: str,
     activations_to_cache: list = [
         "encoder.blocks.3",
         "decoder.blocks.3",
@@ -22,11 +23,12 @@ def get_activations(
 ):
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")
-    pathlib.Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
     actv_cache = WhisperActivationCache(
         model_name=MODEL_NAME, activations_to_cache=activations_to_cache
     )
-    dataset = WhisperMelsDataset()
+    dataset = WhisperMelsDataset(
+        max_num_entries=max_num_entries, split=split, sql_path=sql_path
+    )
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=10))
     for data, lang_codes, audio_paths in dataloader:
         actv_cache.reset_state()
@@ -37,7 +39,12 @@ def get_activations(
                 out_path_ext = get_out_path_ext(
                     audio_path=audio_path, lang_code=lang_code
                 )
-                torch.save(layer_actvs[i], f"{OUT_DIR}/{out_path_ext}_{layer}")
+                pathlib.Path(f"{OUT_DIR}/{split}/{layer}").mkdir(
+                    parents=True, exist_ok=True
+                )
+                torch.save(
+                    layer_actvs[i], f"{OUT_DIR}/{split}/{layer}/{out_path_ext}.pt"
+                )
 
 
 def get_out_path_ext(audio_path, lang_code):
@@ -50,4 +57,6 @@ def get_out_path_ext(audio_path, lang_code):
 
 
 if __name__ == "__main__":
+    # example usage:
+    # python3 -m sparse_coding.collect_acvts.collect_activations --max_num_entries 100 --split val --sql_path {outpath}/val_dbl.sql
     fire.Fire(get_activations)

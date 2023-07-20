@@ -5,15 +5,17 @@ import os
 from pathlib import Path
 from torch.nn.utils.rnn import pad_sequence
 
+
 def collate_fn(batch):
     data = pad_sequence(batch, batch_first=True, padding_value=-1)
     return data
 
+
 class ActivationDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        dbl_path: str = "/exp/ellenar/sparse_coding/data/train_activations.dbl",
-        rebuild_sql: bool = True,
+        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",
+        rebuild_sql: bool = False,
     ):
         """
         Takes a file (dbl) containing a list of file paths to saved out activations, builds an sql and

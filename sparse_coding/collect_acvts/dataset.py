@@ -4,7 +4,6 @@ import sqlite3 as sqlite
 import warnings
 import logging
 import os
-from torch.nn.utils.rnn import pad_sequence
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning
@@ -13,14 +12,21 @@ warnings.filterwarnings(
 
 from util import load_audio, trim_audio, dict_hash
 
-DBLX_DICT = {
+TRAIN_DBLX_DICT = {
     "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/train.dblx": "de",
     "/data/artefacts/am/fr/new_normaliser/data_train/train.dblx": "fr",
     "/data/artefacts/am/es/v2023.03_q1rebuild/data_train/train.dblx": "es",
     "/data/artefacts/am/ru/v2023.02_q1rebuild/data_train/train.dblx": "ru",
     "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx": "en",
 }  # file_path, lang_code
-dblx_hash = dict_hash(DBLX_DICT)
+
+VAL_DBLX_DICT = {
+    "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/valid.dblx": "de",
+    "/data/artefacts/am/fr/new_normaliser/data_train/valid.dblx": "fr",
+    "/data/artefacts/am/es/v2023.03_q1rebuild/data_train/valid.dblx": "es",
+    "/data/artefacts/am/ru/v2023.02_q1rebuild/data_train/valid.dblx": "ru",
+    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/valid.dblx": "en",
+}  # file_path, lang_code
 
 
 def collate_fn(batch):
@@ -33,23 +39,29 @@ def collate_fn(batch):
 class WhisperMelsDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        max_num_entries: int = 10_000,
-        sql_path: str = f"/exp/ellenar/sparse_coding/data/train_dbl.sql",
+        max_num_entries: int = 100,  # maximum number of audio samples in sql
+        sql_path: str = f"/exp/ellenar/sparse_coding/data/val_dbl.sql",
+        split: str = "train",  # train or val
     ):
         super().__init__()
         self.max_num_entries = max_num_entries
         self.sql_path = sql_path
+        self.dblx_dict = TRAIN_DBLX_DICT if split == "train" else VAL_DBLX_DICT
         if not os.path.exists(sql_path):
             self._build_sql()
         self.conn = sqlite.connect(sql_path)
 
     def _build_sql(self):
-        self._init_sql(self.sql_path)
+        """
+        Builds an sql from a text file containing the paths to audio files.
+        The sql will contain an equal split from each class (max_entries//n_classes)
+        """
+        self._init_sql()
         total_entries = 0
-        entries_per_class = self.max_num_entries // len(DBLX_DICT)
+        entries_per_class = self.max_num_entries // len(self.dblx_dict)
         with sqlite.connect(f"{self.sql_path}") as conn:
             cur = conn.cursor()
-            for dblx_path, lang in DBLX_DICT.items():
+            for dblx_path, lang in self.dblx_dict.items():
                 with open(dblx_path, "r") as f:
                     entries_in_class = 0
                     while True:
@@ -74,7 +86,8 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
                         if entries_in_class == entries_per_class:
                             break
         assert total_entries <= self.max_num_entries
-    
+        print(f"Total entries in sql={total_entries}")
+
     def _init_sql(self):
         dir_path = os.path.dirname(self.sql_path)
         if not os.path.isdir(dir_path):
