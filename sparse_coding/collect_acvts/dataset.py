@@ -4,27 +4,23 @@ import sqlite3 as sqlite
 import warnings
 import logging
 import os
+import torchaudio
+import whisper
+
+from util import device
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
 
-from util import load_audio, trim_audio, dict_hash
+from util import load_audio, trim_audio
 
 TRAIN_DBLX_DICT = {
-    "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/train.dblx": "de",
-    "/data/artefacts/am/fr/new_normaliser/data_train/train.dblx": "fr",
-    "/data/artefacts/am/es/v2023.03_q1rebuild/data_train/train.dblx": "es",
-    "/data/artefacts/am/ru/v2023.02_q1rebuild/data_train/train.dblx": "ru",
     "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx": "en",
 }  # file_path, lang_code
 
 VAL_DBLX_DICT = {
-    "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/valid.dblx": "de",
-    "/data/artefacts/am/fr/new_normaliser/data_train/valid.dblx": "fr",
-    "/data/artefacts/am/es/v2023.03_q1rebuild/data_train/valid.dblx": "es",
-    "/data/artefacts/am/ru/v2023.02_q1rebuild/data_train/valid.dblx": "ru",
     "/data/artefacts/am/en/v2023.03_full_reseg/data_train/valid.dblx": "en",
 }  # file_path, lang_code
 
@@ -125,3 +121,27 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
     def __len__(self):
         results = self.conn.execute("SELECT * from data").fetchall()
         return len(results)
+
+
+class LibriSpeechDataset(torch.utils.data.Dataset):
+    def __init__(self, root="/exp/ellenar/LibriSpeech"):
+        super().__init__()
+        try:
+            self.dataset = torchaudio.datasets.LIBRISPEECH(
+                download=False, url="train-other-500", root=root
+            )
+        except RuntimeError:
+            self.dataset = torchaudio.datasets.LIBRISPEECH(
+                download=True, url="train-other-500", root=root
+            )
+        self.root = root
+
+    def __getitem__(self, idx):
+        audio_path, sample_rate, transcript, *_ = self.dataset.get_metadata(idx)
+        audio = whisper.load_audio(f"{self.root}/LibriSpeech/{audio_path}")
+        audio = whisper_repo.pad_or_trim(audio.flatten())
+        mels = torch.tensor(whisper_repo.log_mel_spectrogram(audio)).to(device)
+        return mels, "en", audio_path
+
+    def __len__(self):
+        return len(self.dataset)

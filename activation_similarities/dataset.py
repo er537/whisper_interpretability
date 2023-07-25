@@ -2,7 +2,6 @@ import torchaudio
 import torch
 import os
 import numpy as np
-from collections import defaultdict
 import whisper_repo
 
 from util import device, load_audio, trim_audio
