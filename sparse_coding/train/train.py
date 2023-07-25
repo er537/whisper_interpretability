@@ -86,6 +86,16 @@ def validate(
     return np.array(losses_recon).mean(), np.array(losses_l1).mean()
 
 
+def mse_loss(input, target, ignored_index, reduction):
+    # mse_loss with ignored_index
+    mask = target == ignored_index
+    out = (input[~mask] - target[~mask]) ** 2
+    if reduction == "mean":
+        return out.mean()
+    elif reduction == "None":
+        return out
+
+
 def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
@@ -171,7 +181,7 @@ def train(FLAGS, global_rank=0):
     # Set seeds so each rank gets different data
     set_seeds(FLAGS.seed + state["step"] + global_rank)
 
-    recon_loss_fn = torch.nn.MSELoss()
+    recon_loss_fn = partial(mse_loss, ignored_index=-1, reduction="mean")
     while True:
         forward_time = 0
         backward_time = 0

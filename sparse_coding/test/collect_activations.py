@@ -19,16 +19,39 @@ MODEL_NAME = "tiny"
 OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}"
 
 
+def get_features(feature_type: str = "learnt", chk_path: str = None):
+    """
+    type: "learnt", "neuron_basis" or "rand_orth"
+    return either features learnt by autoencoder, neuron basis or a random orthogonal basis
+    """
+    chk = torch.load(chk_path)
+    encoder_weight = chk["model"]["decoder.weight"]
+    if feature_type == "learnt":
+        encoder_bias = chk["model"]["encoder_bias"]
+    elif feature_type == "neuron_basis":
+        encoder_weight = torch.eye(encoder_weight.shape[0], encoder_weight.shape[0])
+        encoder_bias = torch.zeros(encoder_weight.shape[0])
+    elif feature_type == "rand_orth":
+        encoder_weight = torch.nn.init.orthogonal_(
+            torch.empty(encoder_weight.shape[0], encoder_weight.shape[0])
+        )
+        encoder_bias = torch.zeros(encoder_weight.shape[0])
+    else:
+        raise Exception("type must be 'learnt', 'neuron_basis' or 'rand_orth'")
+    return encoder_weight.to(device), encoder_bias.to(device)
+
+
 def get_activations(
     max_num_entries: int,
     split: str,  # train or val
     sql_path: str,
     out_path: str,
     activations_to_cache: list = [
-        "decoder.blocks.2.mlp.1",
+        "decoder.blocks.2.mlp.0",
     ],
     batch_size=100,
-    chk_path: str = "/exp/ellenar/sparse_coding/train/20230719_whisper_tiny_decoder.blocks.3_n_dict_components_384_l1_alpha_1e-2/models/checkpoint.pt.step900",
+    chk_path: str = "/exp/ellenar/sparse_coding/train/20230722_whisper_tiny_decoder.blocks.2.mlp.0_n_dict_components_2000_l1_alpha_5e-4/models/checkpoint.pt.step800",
+    feature_type: str = "learnt",
 ):
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")
@@ -42,9 +65,9 @@ def get_activations(
     actv_cache = WhisperActivationCache(
         model_name=MODEL_NAME, activations_to_cache=activations_to_cache
     )
-    chk = torch.load(chk_path)
-    encoder_weight = chk["model"]["decoder.weight"]
-    encoder_bias = chk["model"]["encoder_bias"]
+    encoder_weight, encoder_bias = get_features(
+        feature_type=feature_type, chk_path=chk_path
+    )
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=batch_size))
     for batch_idx, (data, lang_codes, audio_paths) in enumerate(dataloader):
         actv_cache.reset_state()

@@ -11,11 +11,11 @@ JOB_REASON=
 experiment_suffix=
 
 #Training hyperparameters
-activation_layer=decoder.blocks.3
-train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/train/${activation_layer}_actvs/train.dbl
+activation_layer=decoder.blocks.3.mlp.0
+train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/train/${activation_layer}/train.dbl
 val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/val/${activation_layer}/val.dbl
-n_dict_components=1024
-l1_alpha=1e-2
+n_dict_components=1536
+l1_alpha=5e-4
 lr=4e-4
 batch_size=10
 n_gpus_per_node=1

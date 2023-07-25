@@ -23,17 +23,6 @@ import json
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-
-def dict_hash(dictionary: Dict[str, Any]) -> str:
-    """MD5 hash of a dictionary."""
-    dhash = hashlib.md5()
-    # We need to sort arguments so {'a': 1, 'b': 2} is
-    # the same as {'b': 2, 'a': 1}
-    encoded = json.dumps(dictionary, sort_keys=True).encode()
-    dhash.update(encoded)
-    return str(dhash.hexdigest())
-
-
 def dist_logging(message, rank=0):
     if rank == 0:
         logging.info(message)
@@ -148,6 +137,10 @@ class BaseActivationModule(ABC):
 
     def _get_caching_hook(self, name):
         def hook(module, input, output):
+            if "decoder" in name:
+                if output.shape[1] > 1:
+                    del self.activations[f"{name}"]
+                    return
             output_ = output.detach().cpu()
             if name in self.activations:
                 self.activations[f"{name}"] = torch.cat(
