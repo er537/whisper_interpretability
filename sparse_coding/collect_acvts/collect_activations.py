@@ -30,7 +30,10 @@ def get_activations(
         )
     else:
         assert dataset_name == "LibriSpeech", "dataset should be am or LibriSpeech"
-        dataset = LibriSpeechDataset()
+        if split == "train":
+            dataset = LibriSpeechDataset()
+        elif split == "val":
+            dataset = LibriSpeechDataset(url="dev-clean")
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=100))
     for data, lang_codes, audio_paths in dataloader:
         actv_cache.reset_state()

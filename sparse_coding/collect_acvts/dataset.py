@@ -124,15 +124,15 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
 
 
 class LibriSpeechDataset(torch.utils.data.Dataset):
-    def __init__(self, root="/exp/ellenar/LibriSpeech"):
+    def __init__(self, root="/exp/ellenar/LibriSpeech", url="train-other-500"):
         super().__init__()
         try:
             self.dataset = torchaudio.datasets.LIBRISPEECH(
-                download=False, url="train-other-500", root=root
+                download=False, url=url, root=root
             )
         except RuntimeError:
             self.dataset = torchaudio.datasets.LIBRISPEECH(
-                download=True, url="train-other-500", root=root
+                download=True, url=url, root=root
             )
         self.root = root
 

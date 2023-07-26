@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# All blank parameters default to train_param_defaults.yaml values
 WORK_ROOT=
 WORK_DIR=
 
@@ -11,9 +10,9 @@ JOB_REASON=
 experiment_suffix=
 
 #Training hyperparameters
-activation_layer=decoder.blocks.3.mlp.0
-train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/train/${activation_layer}/train.dbl
-val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/val/${activation_layer}/val.dbl
+activation_layer=decoder.token_embedding
+train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/train/${activation_layer}/train.dbl
+val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/val/${activation_layer}/val.dbl
 n_dict_components=1536
 l1_alpha=5e-4
 lr=4e-4
@@ -42,7 +41,7 @@ model_out_dir=${WORK_DIR}/models
 
 mkdir -p $model_out_dir && chmod g+w "$WORK_DIR"
 
-# Copy code into workspace
+# Copy code into experiment directory for traceability
 rsync --quiet -avhzL ./* $WORK_DIR/code 
 train_copy="$WORK_DIR/$(basename $train_data)"
 val_copy="$WORK_DIR/$(basename $val_data)"
