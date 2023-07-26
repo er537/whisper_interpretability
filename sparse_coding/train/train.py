@@ -14,7 +14,7 @@ from time import perf_counter
 from sparse_coding.train.dataset import ActivationDataset, collate_fn
 from sparse_coding.train.autoencoder import AutoEncoder
 from base_train import train_init
-from util import (
+from global_utils import (
     load_checkpoint,
     save_checkpoint,
     Metadata,

@@ -8,60 +8,62 @@ from collections import defaultdict
 import pickle
 import os
 
-from util import device
-from utils.activation_caches import WhisperActivationCache
-from sparse_coding.collect_acvts.dataset import WhisperMelsDataset
+from global_utils import device
+from sparse_coding.local_utils import get_features
+from global_whisper_utils import (
+    WhisperMelsDataset,
+    LibriSpeechDataset,
+    WhisperActivationCache,
+)
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
 
 MODEL_NAME = "tiny"
-OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}"
+OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}_LibriSpeech"
+
+"""
+Find the max activating dataset examples for every feature in dictionary
+Features are either:
+- 'learnt' by sparse coding, 
+- the neuron basis 
+- a random orthogonal basis
+"""
 
 
-def get_features(feature_type: str = "learnt", chk_path: str = None):
-    """
-    type: "learnt", "neuron_basis" or "rand_orth"
-    return either features learnt by autoencoder, neuron basis or a random orthogonal basis
-    """
-    chk = torch.load(chk_path)
-    encoder_weight = chk["model"]["decoder.weight"]
-    if feature_type == "learnt":
-        encoder_bias = chk["model"]["encoder_bias"]
-    elif feature_type == "neuron_basis":
-        encoder_weight = torch.eye(encoder_weight.shape[0], encoder_weight.shape[0])
-        encoder_bias = torch.zeros(encoder_weight.shape[0])
-    elif feature_type == "rand_orth":
-        encoder_weight = torch.nn.init.orthogonal_(
-            torch.empty(encoder_weight.shape[0], encoder_weight.shape[0])
-        )
-        encoder_bias = torch.zeros(encoder_weight.shape[0])
-    else:
-        raise Exception("type must be 'learnt', 'neuron_basis' or 'rand_orth'")
-    return encoder_weight.to(device), encoder_bias.to(device)
-
-
-def get_activations(
-    max_num_entries: int,
-    split: str,  # train or val
-    sql_path: str,
+def get_feature_activations(
     out_path: str,
+    split: str,  # train or val
+    max_num_entries: int = 0,
+    sql_path: str = None,
     activations_to_cache: list = [
-        "decoder.blocks.2.mlp.0",
+        "decoder.token_embedding",
     ],
     batch_size=100,
-    chk_path: str = "/exp/ellenar/sparse_coding/train/20230722_whisper_tiny_decoder.blocks.2.mlp.0_n_dict_components_2000_l1_alpha_5e-4/models/checkpoint.pt.step800",
+    chk_path: str = "/exp/ellenar/sparse_coding/train/20230726_whisper_tiny_decoder.token_embedding_n_dict_components_2000_l1_alpha_5e-5_LibriSpeech/models/checkpoint.pt.step5000",
     feature_type: str = "learnt",
+    dataset_name: str = "am",
+    k: int = 10,
 ):
+    """
+    Compute and save the top k activating fragments for each feature
+    """
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")
 
     featurewise_max_activating_fragments = defaultdict(
-        partial(MaxActivatingFragments, 10)
+        partial(MaxActivatingFragments, k=k)
     )  # key=feature_idx, value=max_activating_fragments
-    dataset = WhisperMelsDataset(
-        max_num_entries=max_num_entries, split=split, sql_path=sql_path
-    )
+    if dataset_name == "am":
+        dataset = WhisperMelsDataset(
+            max_num_entries=max_num_entries, split=split, sql_path=sql_path
+        )
+    else:
+        assert dataset_name == "LibriSpeech", "dataset should be am or LibriSpeech"
+        if split == "train":
+            dataset = LibriSpeechDataset()
+        elif split == "val":
+            dataset = LibriSpeechDataset(url="dev-clean")
     actv_cache = WhisperActivationCache(
         model_name=MODEL_NAME, activations_to_cache=activations_to_cache
     )
@@ -87,7 +89,7 @@ def get_activations(
                     featurewise_max_activating_fragments[feature_idx].heappushpop(
                         feature_activation_scores, audio_path, tokens
                     )
-        print(f"Processed batch {batch_idx} of {max_num_entries//batch_size}")
+        print(f"Processed batch {batch_idx} of size {batch_size}")
     save_max_activating_fragments(featurewise_max_activating_fragments, out_path)
 
 
@@ -106,12 +108,17 @@ def save_max_activating_fragments(
 
 
 class MaxActivatingFragments(list):
-    def __init__(self, max_len):
+    """
+    Class to store k max activating fragements for each feature.
+    Uses heapq to push new activations onto the stack and pop the smallest off the top
+    """
+
+    def __init__(self, k):
         super().__init__()
         self.metadata = (
             {}
         )  # keys are activation scores, values are audio paths and transcripts
-        self.max_len = max_len
+        self.k = k
         self.mean_activation = 0
         self.num_activations = 0  # used to calculate running mean
 
@@ -124,7 +131,7 @@ class MaxActivatingFragments(list):
         self.num_activations += 1
         transcript = tokenizer.decode(tokens)
         self.metadata[max_activation] = [audio_path, transcript, tokens, activations]
-        if len(self) == self.max_len:
+        if len(self) == self.k:
             min_activation = heapq.heappushpop(self, max_activation)
             try:
                 del self.metadata[min_activation]
@@ -135,6 +142,4 @@ class MaxActivatingFragments(list):
 
 
 if __name__ == "__main__":
-    # example usage:
-    # python3 -m sparse_coding.collect_acvts.collect_activations --max_num_entries 100 --split val --sql_path {outpath}/val_dbl.sql
-    fire.Fire(get_activations)
+    fire.Fire(get_feature_activations)

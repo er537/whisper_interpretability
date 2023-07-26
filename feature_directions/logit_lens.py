@@ -6,19 +6,16 @@ from rich.table import Table
 from rich.console import Console
 
 from whisper_repo import Whisper
-from probes.utils.activation_caches import WhisperActivationCache
-from util import get_mels_from_dblx, device
+from global_whisper_utils import (
+    WhisperActivationCache,
+    get_mels_from_dblx,
+    MULTILANG_DBLX_DICT,
+)
+from global_utils import device
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
 
-DBLX_DICT = {
-    "/data/artefacts/am/de/v2023.02_q1rebuild/data_train/train.dblx": "de",
-    "/data/artefacts/am/fr/new_normaliser/data_train/train.dblx": "fr",
-    "/data/artefacts/am/es/v2023.03_q1rebuild/data_train/train.dblx": "es",
-    "/data/artefacts/am/ru/v2023.02_q1rebuild/data_train/train.dblx": "ru",
-    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx": "en",
-}  # file_path, lang_code
 NUM_SAMPLES = 10
 NUM_LAYERS = 4
 NUM_HEADS = 6
@@ -87,7 +84,7 @@ def run_logit_lens_on_layers():
             f"decoder.blocks.{layer}.cross_attn.wv_hook" for layer in range(NUM_LAYERS)
         ],
     )
-    for dblx_path, lang_code in DBLX_DICT.items():
+    for dblx_path, lang_code in MULTILANG_DBLX_DICT.items():
         mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
         actv_mod.forward(mels)
         for layer in range(NUM_LAYERS):
@@ -117,7 +114,7 @@ def run_logit_lens_on_heads():
             f"decoder.blocks.{layer}.cross_attn.wv_hook" for layer in range(NUM_LAYERS)
         ],
     )
-    for dblx_path, lang_code in DBLX_DICT.items():
+    for dblx_path, lang_code in MULTILANG_DBLX_DICT.items():
         mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
         actv_mod.forward(mels)
         for layer in range(NUM_LAYERS):

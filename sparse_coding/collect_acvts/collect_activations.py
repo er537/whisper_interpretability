@@ -3,42 +3,57 @@ import warnings
 import fire
 import pathlib
 import os
+from typing import Optional
 
-from util import device
-from utils.activation_caches import WhisperActivationCache
-from sparse_coding.collect_acvts.dataset import WhisperMelsDataset, LibriSpeechDataset
+from global_utils import device, todays_date
+from global_whisper_utils import (
+    WhisperMelsDataset,
+    LibriSpeechDataset,
+    WhisperActivationCache,
+)
 
 MODEL_NAME = "tiny"
 OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}"
 
+"""
+Script to collect activations from an intermediate layer of Whisper
+max_num_entries: Number of audio files (sammples) to use
+sql_path: path to store sql database used by dataloader
+layer_to_cache: named module from whisper.named_modules() to cache activations from
+"""
+
 
 def get_activations(
-    max_num_entries: int = None,
+    max_num_entries: Optional[int],  # only required for am dataset
+    sql_path: Optional[str],  # only required for am dataset
     split: str = "train",  # train or val
-    sql_path: str = None,
-    activations_to_cache: list = ["decoder.token_embedding"],
+    layer_to_cache: str = "decoder.token_embedding",
     dataset_name: str = "am",
 ):
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")
     actv_cache = WhisperActivationCache(
-        model_name=MODEL_NAME, activations_to_cache=activations_to_cache
+        model_name=MODEL_NAME, activations_to_cache=[layer_to_cache]
     )
     if dataset_name == "am":
+        assert sql_path is not None, "Please provide an SQL path"
+        assert max_num_entries is not None, "Please provide the max_num_entries"
         dataset = WhisperMelsDataset(
             max_num_entries=max_num_entries, split=split, sql_path=sql_path
         )
     else:
-        assert dataset_name == "LibriSpeech", "dataset should be am or LibriSpeech"
+        assert (
+            dataset_name == "LibriSpeech"
+        ), "dataset should be either am or LibriSpeech"
         if split == "train":
-            dataset = LibriSpeechDataset()
+            dataset = LibriSpeechDataset(url="train-other-500")
         elif split == "val":
             dataset = LibriSpeechDataset(url="dev-clean")
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=100))
     for data, lang_codes, audio_paths in dataloader:
         actv_cache.reset_state()
         actv_cache.forward(data.to(device))
-        for layer in activations_to_cache:
+        for layer in layer_to_cache:
             layer_actvs = actv_cache.activations[f"{layer}"].to("cpu")
             for i, (lang_code, audio_path) in enumerate(zip(lang_codes, audio_paths)):
                 out_path_ext = get_out_path_ext(
@@ -49,7 +64,7 @@ def get_activations(
                 )
                 torch.save(
                     layer_actvs[i],
-                    f"{OUT_DIR}_{dataset_name}/{split}/{layer}/{out_path_ext}.pt",
+                    f"{OUT_DIR}_{dataset_name}/{split}/{layer}/{todays_date}_{out_path_ext}.pt",
                 )
 
 
@@ -63,6 +78,4 @@ def get_out_path_ext(audio_path, lang_code):
 
 
 if __name__ == "__main__":
-    # example usage:
-    # python3 -m sparse_coding.collect_acvts.collect_activations --max_num_entries 100 --split val --sql_path {outpath}/val_dbl.sql
     fire.Fire(get_activations)

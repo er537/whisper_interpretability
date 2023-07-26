@@ -2,6 +2,9 @@ import sqlite3 as sqlite
 import logging
 import fire
 
+"""
+Creates an sql table from 
+"""
 
 def init_sql(sql_path):
     with sqlite.connect(f"{sql_path}") as conn:

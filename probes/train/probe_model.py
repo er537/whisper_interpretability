@@ -10,7 +10,8 @@ class Probe(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
+        # x: (bsz, seq_len, d_model)
         x = self.w1(x)
         if hasattr(self, "w2"):
-            x = self.w2(x.permute(0, 2, 1)).permute(0, 2, 1)
+            x = self.w2(x.permute(0, 2, 1)).permute(0, 2, 1) # optionally 'convolve' along sequence dimension
         return self.softmax(x)

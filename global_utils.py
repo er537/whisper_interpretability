@@ -1,7 +1,5 @@
 import torch
-import whisper
 from abc import ABC, abstractmethod
-from subprocess import CalledProcessError, run
 import numpy as np
 import glob
 import gc
@@ -16,98 +14,31 @@ from absl import logging
 import time
 import sys
 from typing import Callable
-from typing import Dict, Any
-import hashlib
-import json
+from datetime import date
+import logging
+import os
+from typing import Optional
 
-
+todays_date = date.today()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-def dist_logging(message, rank=0):
-    if rank == 0:
-        logging.info(message)
-
-
-def get_mels_from_dblx(dblx_path, num_samples):
-    batch_mels = []
-    with open(dblx_path, "r") as f:
-        for _ in range(num_samples):
-            line = f.readline().split(" ")
-            audio_path = line[1]
-            start_time = float(line[2])
-            end_time = float(line[3])
-            audio = load_audio(audio_path)
-            audio = trim_audio(audio, start_time=start_time, end_time=end_time)
-            audio = whisper.pad_or_trim(audio.flatten())
-            mels = torch.tensor(whisper.log_mel_spectrogram(audio)).to(device)
-            batch_mels.append(mels)
-    return torch.stack(batch_mels, dim=0)
-
-
-def trim_audio(
-    array: np.array,
-    start_time: float,
-    end_time: float,
-    sample_rate: int = 16_000,
-):
-    """
-    Trim the audio file base array to n_samples, as expected by the encoder.
-    """
-    start_frame = int(sample_rate * start_time)
-    end_frame = int(sample_rate * end_time)
-
-    return array[start_frame:end_frame]
-
-
-def load_audio(file: str, sample_rate_hz: int = 16_000):
-    """
-    Taken from Whisper repo: https://github.com/openai/whisper/blob/main/whisper/audio.py
-
-    Open an audio file and read as mono waveform, resampling as necessary
-
-    Parameters
-    ----------
-    file: str
-        The audio file to open
-
-    sample_rate_hz: int
-        The sample rate to resample the audio if necessary
-
-    Returns
-    -------
-    A NumPy array containing the audio waveform, in float32 dtype.
-    """
-
-    # This launches a subprocess to decode audio while down-mixing
-    # and resampling as necessary.  Requires the ffmpeg CLI in PATH.
-    # fmt: off
-    cmd = [
-        "ffmpeg",
-        "-nostdin",
-        "-threads", "0",
-        "-i", file,
-        "-f", "s16le",
-        "-ac", "1",
-        "-acodec", "pcm_s16le",
-        "-ar", str(sample_rate_hz),
-        "-"
-    ]
-    # fmt: on
-    try:
-        out = run(cmd, capture_output=True, check=True).stdout
-    except CalledProcessError as e:
-        raise RuntimeError(f"Failed to load audio: {e.stderr.decode()}") from e
-
-    return np.frombuffer(out, np.int16).flatten().astype(np.float32) / 32768.0
+"""
+A collection of functions commonly used throughout the repo
+"""
 
 
 class BaseActivationModule(ABC):
     def __init__(
         self,
         model: torch.nn.Module,
+        hook_fn: Optional[Callable] = None,
         activations_to_cache: list = ["all"],
-        hook_fn: Callable = None,
     ):
+        """
+        Base class using pytorch hooks to cache all intermediate activations in [activations_to_cache]
+        Parent classes should inherit from this class, implementing their own custom_forward method
+        You can optionally pass in your own hook_fn
+        """
         assert model is not None, "no model found"
         self.model = model
         self.step = 0
@@ -151,9 +82,6 @@ class BaseActivationModule(ABC):
 
         return hook
 
-    def cluser_activations(self, name):
-        raise NotImplementedError
-
     def remove_hooks(self):
         for hook in self.hooks:
             hook.remove()
@@ -168,6 +96,11 @@ class BaseActivationModule(ABC):
 
     def reset_state(self):
         self.activations = {}
+
+
+def dist_logging(message, rank=0):
+    if rank == 0:
+        logging.info(message)
 
 
 def get_checkpoint_to_start_from(checkpoint_path):

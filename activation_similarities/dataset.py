@@ -4,7 +4,7 @@ import os
 import numpy as np
 import whisper_repo
 
-from util import device, load_audio, trim_audio
+from global_utils import device, load_audio, trim_audio
 
 
 class LibriSpeech(torch.utils.data.Dataset):

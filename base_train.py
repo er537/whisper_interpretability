@@ -7,7 +7,11 @@ import datetime
 import socket
 import types
 
-from util import device, get_checkpoint_to_start_from
+from global_utils import device, get_checkpoint_to_start_from
+
+"""
+Basic functionality used in all training runs
+"""
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("model_out", None, "path to where to save trained model")

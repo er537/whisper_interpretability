@@ -9,7 +9,7 @@ warnings.filterwarnings(
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
 
-from util import load_audio, trim_audio
+from global_whisper_utils import load_audio, trim_audio
 
 
 def collate_fn(batch):
@@ -29,6 +29,10 @@ class MultiClassDataset(torch.utils.data.Dataset):
         pad=True,  ## pad/trim for Whisper
         audio_ret_type="mfcc",  # mfcc or waveform
     ):
+        """
+        Sample from sql comprised of two (or more) classes of data
+        Used to train a probe on multiclass classification
+        """
         super().__init__()
         self.conn = sqlite.connect(sql_path)
         self.length = num_entries

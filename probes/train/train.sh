@@ -29,7 +29,6 @@ test_pr_every=
 whisper_model=tiny
 probe_layer='encoder.blocks.3'
 head_idx=
-topk_attn=
 seq_len=
 val_samples=100
 
@@ -112,7 +111,6 @@ if [[ ! -f ${WORK_DIR}/done_train ]]; then
     --checkpoint_out ${model_out_dir}/checkpoint.pt \
     --model_out ${model_out_dir}/model.ts \
     --probe_layer $probe_layer \
-    $([ ! -z $topk_attn ] && echo "--topk_attn=${topk_attn}") \
     $([ ! -z $seq_len ] && echo "--seq_len=${seq_len}") \
     $([ ! -z $head_idx ] && echo "--head_idx=${head_idx}") \
     --whisper_model $whisper_model \

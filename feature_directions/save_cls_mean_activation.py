@@ -4,12 +4,18 @@ import warnings
 import fire
 import pathlib
 
-from util import device
-from utils.activation_caches import WhisperActivationCache
+from global_utils import device
+from global_whisper_utils import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset
 
 OUT_DIR = "/exp/ellenar/whisper_activations"
 LANG_CODE = "de"
+
+"""
+Save the mean activation for all layers in [activations_to_cache] to disk
+Used for activation steering eg save the mean french activation and use it to 'steer' german text
+"""
+
 
 def get_activations(
     activations_to_cache: list = [

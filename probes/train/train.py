@@ -14,10 +14,10 @@ from math import inf
 from time import perf_counter
 
 from probes.train.dataset import MultiClassDataset, collate_fn
-from utils.activation_caches import WhisperActivationCache
+from global_whisper_utils import WhisperActivationCache
 from probes.train.probe_model import Probe
 from base_train import train_init
-from util import (
+from global_utils import (
     load_checkpoint,
     save_checkpoint,
     save_model,
@@ -57,9 +57,8 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
 flags.DEFINE_integer(
-    "head_idx", None, "if not None, will use that specific attn head output"
+    "head_idx", None, "if not None, will only use that specific attn head output"
 )
-flags.DEFINE_integer("topk_attn", None, "the top k attention scores to extract out")
 flags.DEFINE_integer("seq_len", None, "Used to 'convolve' over the sequence length")
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
 flags.DEFINE_integer("val_samples", 100, "Number of samples to validate on")
@@ -105,19 +104,6 @@ def validate(
         with torch.no_grad() and autocast():
             whisper_model.forward(data)
             activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(device)
-            if FLAGS.topk_attn:
-                # Only use the topk attention score sequence positions
-                attn_scores = whisper_model.activations[
-                    "decoder.blocks.1.cross_attn.attn_hook"
-                ].permute(0, 3, 1, 2)
-                activations = activations.view(
-                    *activations.shape[:2], attn_scores.shape[2], -1
-                )
-                _, attn_indxs = torch.topk(
-                    attn_scores.float(), dim=1, k=FLAGS.topk_attn
-                )
-                attn_indxs = attn_indxs.repeat(1, 1, activations.shape[-1]).long()
-                activations = activations.gather(1, attn_indxs.to(device))
             if FLAGS.head_idx is not None:
                 activations = activations[:, :, FLAGS.head_idx, :]
                 attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
@@ -137,21 +123,16 @@ def validate(
     return np.array(losses).mean(), np.array(accs).mean(), frames_seen
 
 
-def get_probe_feat_dim(probe_layer, model, topk_attn):
+def get_probe_feat_dim(probe_layer, model):
     dataset = MultiClassDataset(num_entries=1)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     mels, *_ = next(iter(dataloader))
     whisper_model = WhisperActivationCache(
-        activations_to_cache=[probe_layer, "decoder.blocks.1.cross_attn.attn_hook"],
+        activations_to_cache=[probe_layer],
         model=model,
     )
     whisper_model.forward(mels.to(device))
     activations = whisper_model.activations[f"{probe_layer}"]
-    if topk_attn is not None:
-        attn_scores = whisper_model.activations[
-            "decoder.blocks.1.cross_attn.attn_hook"
-        ].permute(0, 3, 1, 2)
-        activations = activations.view(*activations.shape[:2], attn_scores.shape[2], -1)
     return activations.shape[-1]  # (bsz, seq_len, n_heads, head_dim)
 
 
@@ -159,19 +140,18 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
     whisper_orig_model = whisper.load_model(FLAGS.whisper_model)
-    hacked_model = Whisper(whisper_orig_model.dims)
+    hacked_model = Whisper(
+        whisper_orig_model.dims
+    )  # we use a 'hacked' version of the module so we can to extract any intermediete activation
     hacked_model.load_state_dict(whisper_orig_model.state_dict())
     whisper_model = WhisperActivationCache(
         activations_to_cache=[
             FLAGS.probe_layer,
-            "decoder.blocks.1.cross_attn.attn_hook",
         ],
         model=hacked_model,
     )
-    fd = get_probe_feat_dim(FLAGS.probe_layer, hacked_model, FLAGS.head_idx)
-    assert FLAGS.topk_attn is None or FLAGS.seq_len is None
-    seq_len = FLAGS.topk_attn if FLAGS.topk_attn is not None else FLAGS.seq_len
-    model = Probe(feat_dim=fd, seq_len=seq_len).to(device)
+    fd = get_probe_feat_dim(FLAGS.probe_layer, hacked_model)
+    model = Probe(feat_dim=fd, seq_len=FLAGS.seq_len).to(device)
     if FLAGS.n_devices > 1:
         dist_model = DDP(model, device_ids=[global_rank])
         model = dist_model.module
@@ -273,20 +253,6 @@ def train(FLAGS, global_rank=0):
                 activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(
                     device
                 )
-                if FLAGS.topk_attn:
-                    # Only use the topk attention score sequence positions
-                    attn_scores = whisper_model.activations[
-                        "decoder.blocks.1.cross_attn.attn_hook"
-                    ].permute(0, 3, 1, 2)
-                    activations = activations.view(
-                        *activations.shape[:2], attn_scores.shape[2], -1
-                    )
-
-                    _, attn_indxs = torch.topk(
-                        attn_scores.float(), dim=1, k=FLAGS.topk_attn
-                    )
-                    attn_indxs = attn_indxs.repeat(1, 1, activations.shape[-1]).long()
-                    activations = activations.gather(1, attn_indxs.to(device))
                 if FLAGS.head_idx is not None:
                     activations = activations[:, :, FLAGS.head_idx, :]
                     attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
