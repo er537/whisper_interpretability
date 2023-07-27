@@ -48,7 +48,7 @@ class BaseActivationModule(ABC):
         self.activations_to_cache = activations_to_cache
         self.hook_fn = hook_fn
 
-    def forward(self, x: Float[Tensor, "bsz, seq_len, n_mels"]):  # noqa: F821
+    def forward(self, x: Float[Tensor, "bsz seq_len n_mels"]):  # noqa: F821
         self.model.zero_grad()
         self.step += 1
         self.register_hooks()
@@ -77,7 +77,7 @@ class BaseActivationModule(ABC):
 
     @abstractmethod
     def custom_forward(
-        self, model: torch.nn.Module, mels: Float[Tensor, "bsz, seq_len, n_mels"]  # noqa: F821
+        self, model: torch.nn.Module, mels: Float[Tensor, "bsz seq_len n_mels"]  # noqa: F821
     ):
         """
         Should be overidden inside child class to match specific model.

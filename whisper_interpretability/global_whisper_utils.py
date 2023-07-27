@@ -258,7 +258,7 @@ class WhisperActivationCache(BaseActivationModule):
         )
 
     def custom_forward(
-        self, model: torch.nn.Module, mels: Float[Tensor, "bsz, seq_len, n_mels"]
+        self, model: torch.nn.Module, mels: Float[Tensor, "bsz seq_len n_mels"]
     ):  # noqa: F821
         options = whisper.DecodingOptions(without_timestamps=False, fp16=(device == "cuda"))
         output = model.decode(mels, options)

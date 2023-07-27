@@ -13,5 +13,5 @@ check:
 format:
 	black .
 	isort --profile black **/*.py
-
-
+test:
+	pytest -v

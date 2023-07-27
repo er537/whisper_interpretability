@@ -11,7 +11,7 @@ class Probe(nn.Module):
             self.w2 = nn.Linear(seq_len, 1, bias=False)
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, x: Float[Tensor, "bsz, seq_len, d_model"]):  # noqa: F821
+    def forward(self, x: Float[Tensor, "bsz seq_len d_model"]):  # noqa: F821
         x = self.w1(x)
         if hasattr(self, "w2"):
             x = self.w2(x.permute(0, 2, 1)).permute(
