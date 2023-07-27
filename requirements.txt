@@ -5,6 +5,7 @@ flake8
 pre-commit
 pylint
 isort==5.10.1
+mypy
 
 # whisper_interpretability
 absl-py
