@@ -24,9 +24,7 @@ class AutoEncoder(nn.Module):
     def forward(self, x):
         # x: (bsz, seq_len, feat_dim)
         # Apply unit norm constraint to the decoder weights
-        self.decoder.weight.data = nn.functional.normalize(
-            self.decoder.weight.data, dim=0
-        )
+        self.decoder.weight.data = nn.functional.normalize(self.decoder.weight.data, dim=0)
         c = self.encoder(x @ self.decoder.weight + self.encoder_bias)
 
         # Decoding step as before

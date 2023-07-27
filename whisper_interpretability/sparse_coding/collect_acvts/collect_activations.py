@@ -1,15 +1,15 @@
-import torch
-import warnings
-import fire
-import pathlib
 import os
+import pathlib
+import warnings
 from typing import Optional
 
+import fire
+import torch
 from global_utils import device, todays_date
 from global_whisper_utils import (
-    WhisperMelsDataset,
     LibriSpeechDataset,
     WhisperActivationCache,
+    WhisperMelsDataset,
 )
 
 MODEL_NAME = "tiny"
@@ -42,9 +42,7 @@ def get_activations(
             max_num_entries=max_num_entries, split=split, sql_path=sql_path
         )
     else:
-        assert (
-            dataset_name == "LibriSpeech"
-        ), "dataset should be either am or LibriSpeech"
+        assert dataset_name == "LibriSpeech", "dataset should be either am or LibriSpeech"
         if split == "train":
             dataset = LibriSpeechDataset(url="train-other-500")
         elif split == "val":
@@ -56,9 +54,7 @@ def get_activations(
         for layer in layer_to_cache:
             layer_actvs = actv_cache.activations[f"{layer}"].to("cpu")
             for i, (lang_code, audio_path) in enumerate(zip(lang_codes, audio_paths)):
-                out_path_ext = get_out_path_ext(
-                    audio_path=audio_path, lang_code=lang_code
-                )
+                out_path_ext = get_out_path_ext(audio_path=audio_path, lang_code=lang_code)
                 pathlib.Path(f"{OUT_DIR}_{dataset_name}/{split}/{layer}").mkdir(
                     parents=True, exist_ok=True
                 )

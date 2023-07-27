@@ -1,30 +1,29 @@
-import numpy as np
-import torch
-
-from absl import app, flags, logging
-from torch.cuda.amp import autocast
-from torch.optim import RAdam
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 from math import inf
 from time import perf_counter
 
-from sparse_coding.train.dataset import ActivationDataset, collate_fn
-from sparse_coding.train.autoencoder import AutoEncoder
+import numpy as np
+import torch
+from absl import app, flags, logging
 from base_train import train_init
 from global_utils import (
-    load_checkpoint,
-    save_checkpoint,
     Metadata,
     device,
+    dist_logging,
     dump_checkpoint_on_kill,
+    load_checkpoint,
     prepare_tb_logging,
+    save_checkpoint,
     set_seeds,
     snapshot_memory_usage,
-    dist_logging,
 )
+from sparse_coding.train.autoencoder import AutoEncoder
+from sparse_coding.train.dataset import ActivationDataset, collate_fn
+from torch.cuda.amp import autocast
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.optim import RAdam
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data.distributed import DistributedSampler
 
 torch.backends.cudnn.benchmark = True
 logging.set_verbosity(logging.INFO)
@@ -37,26 +36,20 @@ flags.DEFINE_boolean(
     True,
     "state if an learning rate scheduler is required during training",
 )
-flags.DEFINE_float(
-    "scheduler_decay", 1.0 / 3, "proportion of training steps over which lr decays"
-)
+flags.DEFINE_float("scheduler_decay", 1.0 / 3, "proportion of training steps over which lr decays")
 flags.DEFINE_float("clip_thresh", 1.0, "value to clip gradients to")
 
 # Regularization
 flags.DEFINE_float("weight_decay", 0.0, "weight decay to use for training")
 
 # Sparse Coding hyperparams
-flags.DEFINE_integer(
-    "n_dict_components", None, "number of components in Sparse Dictionary"
-)
+flags.DEFINE_integer("n_dict_components", None, "number of components in Sparse Dictionary")
 flags.DEFINE_string(
     "activation_layer",
     None,
     "which layer of the base models internal activations to use",
 )
-flags.DEFINE_float(
-    "l1_alpha", 1e-3, "multiplier for the l1 'sparsity' component of the loss"
-)
+flags.DEFINE_float("l1_alpha", 1e-3, "multiplier for the l1 'sparsity' component of the loss")
 flags.mark_flag_as_required("n_dict_components")
 flags.mark_flag_as_required("activation_layer")
 
@@ -72,9 +65,7 @@ def validate(
     losses_l1 = []
 
     val_dataset = ActivationDataset(FLAGS.val_data)
-    val_loader = iter(
-        torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args)
-    )
+    val_loader = iter(torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args))
     for activations in val_loader:
         with torch.no_grad() and autocast():
             activations = activations.to(device)
@@ -114,9 +105,7 @@ def train(FLAGS, global_rank=0):
     memory_usage = snapshot_memory_usage()
     tb_logger = prepare_tb_logging(FLAGS.expdir)
     if memory_usage is not None:
-        dist_logging(
-            f"pretrain_mem {memory_usage['allocated']:.5f}GB", rank=global_rank
-        )
+        dist_logging(f"pretrain_mem {memory_usage['allocated']:.5f}GB", rank=global_rank)
 
     if FLAGS.model_out is None:
         FLAGS.model_out = FLAGS.expdir + "/model"
@@ -144,15 +133,11 @@ def train(FLAGS, global_rank=0):
             train_dataset, rank=global_rank, drop_last=True, shuffle=True
         )
         train_loader = iter(
-            torch.utils.data.DataLoader(
-                train_dataset, sampler=train_sampler, **dataloader_kwargs
-            )
+            torch.utils.data.DataLoader(train_dataset, sampler=train_sampler, **dataloader_kwargs)
         )
     else:
         train_loader = iter(
-            torch.utils.data.DataLoader(
-                train_dataset, shuffle=True, **dataloader_kwargs
-            )
+            torch.utils.data.DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
         )
 
     # Object that contains the main state of the train loop
@@ -192,9 +177,7 @@ def train(FLAGS, global_rank=0):
                 activations = next(train_loader).to(device)
             except:
                 train_loader = iter(
-                    torch.utils.data.DataLoader(
-                        train_dataset, shuffle=True, **dataloader_kwargs
-                    )
+                    torch.utils.data.DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
                 )
             # Forward pass
             with autocast():
@@ -225,20 +208,14 @@ def train(FLAGS, global_rank=0):
         meta.snapshot_memory_usage("mem_bwd")
 
         if state["step"] % FLAGS.log_every == 0 and global_rank == 0:
-            dist_logging(
-                f"step {state['step']}, loss {loss.item():.3f}", rank=global_rank
-            )
+            dist_logging(f"step {state['step']}, loss {loss.item():.3f}", rank=global_rank)
 
             # log training losses
             if state["step"] % FLAGS.log_tb_every == 0 and global_rank == 0:
                 tb_logger.add_scalar("train/loss", loss, state["step"])
-                tb_logger.add_scalar(
-                    "train/loss_recon", meta["loss_recon"], state["step"]
-                )
+                tb_logger.add_scalar("train/loss_recon", meta["loss_recon"], state["step"])
                 tb_logger.add_scalar("train/loss_l1", meta["loss_l1"], state["step"])
-                tb_logger.add_scalar(
-                    "train/lr", scheduler.get_last_lr()[0], state["step"]
-                )
+                tb_logger.add_scalar("train/lr", scheduler.get_last_lr()[0], state["step"])
                 # log timings but ignoring first step
                 if state["step"] > 1:
                     meta.log_tb_timings(tb_logger, state["step"])

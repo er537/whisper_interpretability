@@ -1,20 +1,20 @@
-import torch
-import warnings
-import fire
 import heapq
-from functools import partial
-from torch import nn
-from collections import defaultdict
-import pickle
 import os
+import pickle
+import warnings
+from collections import defaultdict
+from functools import partial
 
+import fire
+import torch
 from global_utils import device
-from sparse_coding.local_utils import get_features
 from global_whisper_utils import (
-    WhisperMelsDataset,
     LibriSpeechDataset,
     WhisperActivationCache,
+    WhisperMelsDataset,
 )
+from sparse_coding.local_utils import get_features
+from torch import nn
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
@@ -67,9 +67,7 @@ def get_feature_activations(
     actv_cache = WhisperActivationCache(
         model_name=MODEL_NAME, activations_to_cache=activations_to_cache
     )
-    encoder_weight, encoder_bias = get_features(
-        feature_type=feature_type, chk_path=chk_path
-    )
+    encoder_weight, encoder_bias = get_features(feature_type=feature_type, chk_path=chk_path)
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=batch_size))
     for batch_idx, (data, lang_codes, audio_paths) in enumerate(dataloader):
         actv_cache.reset_state()
@@ -83,9 +81,7 @@ def get_feature_activations(
                 tokens = output[i].tokens
                 for feature_idx in range(batch_feature_activations.shape[-1]):
                     # for every feature_activation, maybe add it to the list of max activating fragments
-                    feature_activation_scores = batch_feature_activations[
-                        i, :, feature_idx
-                    ]
+                    feature_activation_scores = batch_feature_activations[i, :, feature_idx]
                     featurewise_max_activating_fragments[feature_idx].heappushpop(
                         feature_activation_scores, audio_path, tokens
                     )
@@ -93,9 +89,7 @@ def get_feature_activations(
     save_max_activating_fragments(featurewise_max_activating_fragments, out_path)
 
 
-def save_max_activating_fragments(
-    featurewise_max_activating_fragments: dict, out_path: str
-):
+def save_max_activating_fragments(featurewise_max_activating_fragments: dict, out_path: str):
     for (
         feature_idx,
         max_activating_fragments,
@@ -115,9 +109,7 @@ class MaxActivatingFragments(list):
 
     def __init__(self, k):
         super().__init__()
-        self.metadata = (
-            {}
-        )  # keys are activation scores, values are audio paths and transcripts
+        self.metadata = {}  # keys are activation scores, values are audio paths and transcripts
         self.k = k
         self.mean_activation = 0
         self.num_activations = 0  # used to calculate running mean
@@ -125,8 +117,7 @@ class MaxActivatingFragments(list):
     def heappushpop(self, activations, audio_path, tokens):
         max_activation = torch.max(activations).item()
         self.mean_activation = (
-            (self.mean_activation * self.num_activations)
-            + torch.mean(activations).item()
+            (self.mean_activation * self.num_activations) + torch.mean(activations).item()
         ) / (self.num_activations + 1)
         self.num_activations += 1
         transcript = tokenizer.decode(tokens)

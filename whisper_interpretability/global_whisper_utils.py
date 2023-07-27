@@ -1,19 +1,17 @@
-import torch
-import whisper
-import os
-from absl import logging
-import whisper_repo
-import sqlite3 as sqlite
-import warnings
 import logging
 import os
-import torchaudio
-from typing import Optional, Callable
-import numpy as np
+import sqlite3 as sqlite
+import warnings
 from subprocess import CalledProcessError, run
-from typing import Optional
+from typing import Callable, Optional
 
-from global_utils import device, BaseActivationModule
+import numpy as np
+import torch
+import torchaudio
+import whisper
+import whisper_repo
+from absl import logging
+from global_utils import BaseActivationModule, device
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning
@@ -220,13 +218,9 @@ class LibriSpeechDataset(torch.utils.data.Dataset):
     def __init__(self, root="/exp/ellenar/LibriSpeech", url="train-other-500"):
         super().__init__()
         try:
-            self.dataset = torchaudio.datasets.LIBRISPEECH(
-                download=False, url=url, root=root
-            )
+            self.dataset = torchaudio.datasets.LIBRISPEECH(download=False, url=url, root=root)
         except RuntimeError:
-            self.dataset = torchaudio.datasets.LIBRISPEECH(
-                download=True, url=url, root=root
-            )
+            self.dataset = torchaudio.datasets.LIBRISPEECH(download=True, url=url, root=root)
         self.root = root
 
     def __getitem__(self, idx):
@@ -246,23 +240,15 @@ class WhisperActivationCache(BaseActivationModule):
     def __init__(
         self,
         hook_fn: Optional[Callable] = None,
-        model: Optional[
-            torch.nn.Module
-        ] = None,  # if model not provided load whisper model by name
+        model: Optional[torch.nn.Module] = None,  # if model not provided load whisper model by name
         model_name: str = "tiny",
-        activations_to_cache: list = [
-            "encoder.blocks.0"
-        ],  # pass "all" to cache all activations
+        activations_to_cache: list = ["encoder.blocks.0"],  # pass "all" to cache all activations
     ):
         self.model = (
-            model.to(device)
-            if model is not None
-            else whisper.load_model(model_name).to(device)
+            model.to(device) if model is not None else whisper.load_model(model_name).to(device)
         )
         self.activations_to_cache = activations_to_cache
-        self.named_modules = list(
-            {name: mod for name, mod in self.model.named_modules()}
-        )
+        self.named_modules = list({name: mod for name, mod in self.model.named_modules()})
         super().__init__(
             model=self.model,
             activations_to_cache=self.activations_to_cache,
@@ -270,8 +256,6 @@ class WhisperActivationCache(BaseActivationModule):
         )
 
     def custom_forward(self, model: torch.nn.Module, mels) -> dict:
-        options = whisper.DecodingOptions(
-            without_timestamps=False, fp16=(device == "cuda")
-        )
+        options = whisper.DecodingOptions(without_timestamps=False, fp16=(device == "cuda"))
         output = model.decode(mels, options)
         return output

@@ -1,9 +1,9 @@
-import torchaudio
-import torch
 import os
-import numpy as np
-import whisper_repo
 
+import numpy as np
+import torch
+import torchaudio
+import whisper_repo
 from global_utils import device, load_audio, trim_audio
 
 
@@ -69,13 +69,10 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
                 if self.data[label].shape[0] == 0:
                     self.data[label] = trimmed_audio
                 else:
-                    self.data[label] = np.concatenate(
-                        (self.data[label], trimmed_audio), axis=0
-                    )
+                    self.data[label] = np.concatenate((self.data[label], trimmed_audio), axis=0)
 
                 completed = all(
-                    frames.shape[0] > audio_samples_per_class
-                    for frames in self.data.values()
+                    frames.shape[0] > audio_samples_per_class for frames in self.data.values()
                 )
         for label in self.data.keys():
             self.data[label] = self.data[label][: self.audio_samples_per_class]
@@ -85,9 +82,7 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
         for label, samples in self.data.items():
             samples_yielded = 0
             while samples_yielded < self.audio_samples_per_class:
-                audio = samples[
-                    samples_yielded : samples_yielded + self.samples_per_batch
-                ]
+                audio = samples[samples_yielded : samples_yielded + self.samples_per_batch]
                 if self.pad:
                     audio = whisper_repo.pad_or_trim(audio.flatten())
                 mels = torch.tensor(whisper_repo.log_mel_spectrogram(audio)).to(device)

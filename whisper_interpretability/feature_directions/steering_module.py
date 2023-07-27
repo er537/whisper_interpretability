@@ -1,8 +1,7 @@
-import torch
-import whisper
-import torch
 from collections import defaultdict
 
+import torch
+import whisper
 from global_utils import device
 
 """
@@ -37,9 +36,7 @@ class SteeringModule:
         self.steering_vectors = defaultdict(list)
         for name in self.activations_to_steer:
             for label in self.class_labels:
-                activations = torch.load(
-                    f"{self.activation_dir}/{self.model_name}_{name}_{label}"
-                )
+                activations = torch.load(f"{self.activation_dir}/{self.model_name}_{name}_{label}")
                 self.steering_vectors[name].append(torch.mean(activations, dim=0))
 
     def register_hooks(self):
@@ -57,9 +54,7 @@ class SteeringModule:
 
     def forward(self, x):
         self.register_hooks()
-        options = whisper.DecodingOptions(
-            without_timestamps=False, fp16=(device == "cuda")
-        )
+        options = whisper.DecodingOptions(without_timestamps=False, fp16=(device == "cuda"))
         output = self.model.decode(x, options)
         self.remove_hooks()
         return output

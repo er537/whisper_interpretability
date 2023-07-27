@@ -1,9 +1,9 @@
-import torch
-import fire
 import json
 
-from activation_similarities.activation_module import WhipserActivationModule
+import fire
 import numpy as np
+import torch
+from activation_similarities.activation_module import WhipserActivationModule
 
 
 def cache_activations(activations_to_cache, dataclass):
@@ -41,9 +41,7 @@ def get_activations(
     normed_activations = {}
     for dataclass in dataclasses:
         normed_activations = activations[dataclass] - mean_activation
-        normed_activations = (
-            normed_activations / normed_activations.norm(dim=1)[:, None]
-        )
+        normed_activations = normed_activations / normed_activations.norm(dim=1)[:, None]
 
     return activations
 

@@ -1,12 +1,12 @@
-import os
-import torch
-from absl import flags, logging
-import torch.distributed as dist
-import torch.multiprocessing as mp
 import datetime
+import os
 import socket
 import types
 
+import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from absl import flags, logging
 from global_utils import device, get_checkpoint_to_start_from
 
 """
@@ -17,9 +17,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("model_out", None, "path to where to save trained model")
 flags.DEFINE_string("checkpoint", None, "path to loading saved checkpoint")
 flags.DEFINE_string("checkpoint_out", None, "path to save checkpoint")
-flags.DEFINE_boolean(
-    "checkpoint_autoload", True, "if True start from latest checkpoint_out"
-)
+flags.DEFINE_boolean("checkpoint_autoload", True, "if True start from latest checkpoint_out")
 flags.DEFINE_integer("seed", 5, "random seed")
 
 flags.DEFINE_string("train_data", None, "path to train dblx")
@@ -27,13 +25,9 @@ flags.DEFINE_string("val_data", None, "path to validation dblx")
 flags.DEFINE_string("default_testset", None, "path to default testset dblx")
 flags.DEFINE_string("expdir", None, "directory to write all experiment data to")
 
-flags.DEFINE_integer(
-    "batch_size", 1, "batch size, num parallel streams to train on at once"
-)
+flags.DEFINE_integer("batch_size", 1, "batch size, num parallel streams to train on at once")
 flags.DEFINE_integer("steps", -1, "maximum number of train steps")
-flags.DEFINE_integer(
-    "grad_acc_steps", 1, "number batches to accumulate grads before stepping"
-)
+flags.DEFINE_integer("grad_acc_steps", 1, "number batches to accumulate grads before stepping")
 flags.DEFINE_float("lr", 4e-4, "learning rate")
 
 flags.DEFINE_integer("dl_max_workers", 0, "maximum number of dataloader subprocesses")
@@ -43,9 +37,7 @@ flags.DEFINE_integer(
 flags.DEFINE_integer("node_rank", 0, "rank of current node in distributed environment")
 flags.DEFINE_integer("n_nodes", 1, "total number of nodes in distributed environment")
 # gloo required for sparse grads
-flags.DEFINE_enum(
-    "dist_backend", "nccl", ["nccl", "gloo"], "distributed training backend"
-)
+flags.DEFINE_enum("dist_backend", "nccl", ["nccl", "gloo"], "distributed training backend")
 
 flags.DEFINE_integer("val_every", None, "perform validation every n steps")
 flags.DEFINE_integer("save_every", None, "save every n steps")
@@ -151,12 +143,8 @@ def train_init(train, unused_argv):
     torch._C._jit_set_profiling_mode(
         True
     )  # Not 100% necessary, but performance is terrible when False.
-    torch._C._jit_override_can_fuse_on_cpu(
-        False
-    )  # Only True when using the legacy fuser.
-    torch._C._jit_override_can_fuse_on_gpu(
-        False
-    )  # Only True when using the legacy fuser.
+    torch._C._jit_override_can_fuse_on_cpu(False)  # Only True when using the legacy fuser.
+    torch._C._jit_override_can_fuse_on_gpu(False)  # Only True when using the legacy fuser.
     torch._C._jit_set_texpr_fuser_enabled(
         False
     )  # This disables fuser1 (NNC, otherwise called the TensorExpr fuser).
@@ -207,9 +195,7 @@ def train_init(train, unused_argv):
         os.environ.get("GROUP_RANK", FLAGS.node_rank)
     )  # TODO: remove .get fallback once we use torchrun everywhere.
     device_count = torch.cuda.device_count() if torch.cuda.is_available() else 1
-    FLAGS.n_nodes = int(
-        FLAGS.n_devices / device_count
-    )  # assumes equal number of gpus per node
+    FLAGS.n_nodes = int(FLAGS.n_devices / device_count)  # assumes equal number of gpus per node
 
     # train method to be defined at endpoint
     if FLAGS.n_devices > 1:

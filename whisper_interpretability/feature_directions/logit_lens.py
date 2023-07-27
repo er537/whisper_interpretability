@@ -1,17 +1,17 @@
+from collections import defaultdict
+
+import numpy as np
 import torch
 import whisper
-import numpy as np
-from collections import defaultdict
-from rich.table import Table
-from rich.console import Console
-
-from whisper_repo import Whisper
+from global_utils import device
 from global_whisper_utils import (
+    MULTILANG_DBLX_DICT,
     WhisperActivationCache,
     get_mels_from_dblx,
-    MULTILANG_DBLX_DICT,
 )
-from global_utils import device
+from rich.console import Console
+from rich.table import Table
+from whisper_repo import Whisper
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
@@ -28,9 +28,7 @@ def get_lang_probability(activations, lang_code: str, model: torch.nn.Module):
     for name, mod in model.named_modules():
         if name == "decoder.ln":
             ln = mod
-    lang_token = tokenizer.encode(
-        f"<|{lang_code}|>", allowed_special={f"<|{lang_code}|>"}
-    )
+    lang_token = tokenizer.encode(f"<|{lang_code}|>", allowed_special={f"<|{lang_code}|>"})
     activations = ln(activations)
     logits = activations @ token_unembed.half()
     mask = torch.ones(logits.shape[-1], dtype=torch.bool)
@@ -39,9 +37,7 @@ def get_lang_probability(activations, lang_code: str, model: torch.nn.Module):
     return torch.nn.functional.softmax(logits, dim=-1)[:, lang_token]
 
 
-def get_head_lang_probs(
-    activations, lang_code: str, model: torch.nn.Module, layer: int
-):
+def get_head_lang_probs(activations, lang_code: str, model: torch.nn.Module, layer: int):
     for name, param in model.named_parameters():
         if name == "decoder.token_embedding.weight":
             token_unembed = torch.transpose(param, 0, 1)
@@ -53,9 +49,7 @@ def get_head_lang_probs(
             attn_out_weight = param
         elif name == f"decoder.blocks.{layer}.cross_attn.out.bias":
             attn_out_bias = param
-    lang_token = tokenizer.encode(
-        f"<|{lang_code}|>", allowed_special={f"<|{lang_code}|>"}
-    )
+    lang_token = tokenizer.encode(f"<|{lang_code}|>", allowed_special={f"<|{lang_code}|>"})
     head_probs = []
     for head in range(NUM_HEADS):
         head_out = (
@@ -88,9 +82,9 @@ def run_logit_lens_on_layers():
         mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
         actv_mod.forward(mels)
         for layer in range(NUM_LAYERS):
-            activations = actv_mod.activations[
-                f"decoder.blocks.{layer}.cross_attn.wv_hook"
-            ].to(device)
+            activations = actv_mod.activations[f"decoder.blocks.{layer}.cross_attn.wv_hook"].to(
+                device
+            )
             lang_probs = get_lang_probability(activations, lang_code, hacked_model)
             score_dict[layer].append(torch.mean(lang_probs).item())
         actv_mod.reset_state()
@@ -118,12 +112,10 @@ def run_logit_lens_on_heads():
         mels = get_mels_from_dblx(dblx_path, NUM_SAMPLES)
         actv_mod.forward(mels)
         for layer in range(NUM_LAYERS):
-            activations = actv_mod.activations[
-                f"decoder.blocks.{layer}.cross_attn.wv_hook"
-            ].to(device)
-            head_probs = get_head_lang_probs(
-                activations, lang_code, hacked_model, layer
+            activations = actv_mod.activations[f"decoder.blocks.{layer}.cross_attn.wv_hook"].to(
+                device
             )
+            head_probs = get_head_lang_probs(activations, lang_code, hacked_model, layer)
             score_dict[layer].append(head_probs)
         actv_mod.reset_state()
 

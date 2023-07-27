@@ -47,9 +47,7 @@ def compression_ratio(text) -> float:
     return len(text_bytes) / len(zlib.compress(text_bytes))
 
 
-def format_timestamp(
-    seconds: float, always_include_hours: bool = False, decimal_marker: str = "."
-):
+def format_timestamp(seconds: float, always_include_hours: bool = False, decimal_marker: str = "."):
     assert seconds >= 0, "non-negative timestamp expected"
     milliseconds = round(seconds * 1000.0)
 
@@ -63,9 +61,7 @@ def format_timestamp(
     milliseconds -= seconds * 1_000
 
     hours_marker = f"{hours:02d}:" if always_include_hours or hours > 0 else ""
-    return (
-        f"{hours_marker}{minutes:02d}:{seconds:02d}{decimal_marker}{milliseconds:03d}"
-    )
+    return f"{hours_marker}{minutes:02d}:{seconds:02d}{decimal_marker}{milliseconds:03d}"
 
 
 class ResultWriter:
@@ -77,9 +73,7 @@ class ResultWriter:
     def __call__(self, result: dict, audio_path: str, options: dict):
         audio_basename = os.path.basename(audio_path)
         audio_basename = os.path.splitext(audio_basename)[0]
-        output_path = os.path.join(
-            self.output_dir, audio_basename + "." + self.extension
-        )
+        output_path = os.path.join(self.output_dir, audio_basename + "." + self.extension)
 
         with open(output_path, "w", encoding="utf-8") as f:
             self.write_result(result, file=f, options=options)
@@ -161,9 +155,7 @@ class SubtitlesWriter(ResultWriter):
 
                         yield start, end, "".join(
                             [
-                                re.sub(r"^(\s*)(.*)$", r"\1<u>\2</u>", word)
-                                if j == i
-                                else word
+                                re.sub(r"^(\s*)(.*)$", r"\1<u>\2</u>", word) if j == i else word
                                 for j, word in enumerate(all_words)
                             ]
                         )
@@ -202,9 +194,7 @@ class WriteSRT(SubtitlesWriter):
     decimal_marker: str = ","
 
     def write_result(self, result: dict, file: TextIO, options: dict):
-        for i, (start, end, text) in enumerate(
-            self.iterate_result(result, options), start=1
-        ):
+        for i, (start, end, text) in enumerate(self.iterate_result(result, options), start=1):
             print(f"{i}\n{start} --> {end}\n{text}\n", file=file, flush=True)
 
 
@@ -235,9 +225,7 @@ class WriteJSON(ResultWriter):
         json.dump(result, file)
 
 
-def get_writer(
-    output_format: str, output_dir: str
-) -> Callable[[dict, TextIO, dict], None]:
+def get_writer(output_format: str, output_dir: str) -> Callable[[dict, TextIO, dict], None]:
     writers = {
         "txt": WriteTXT,
         "vtt": WriteVTT,

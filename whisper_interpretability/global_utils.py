@@ -1,23 +1,22 @@
-import torch
-from abc import ABC, abstractmethod
-import numpy as np
-import glob
 import gc
-import random
-from pathlib import Path
-from collections import defaultdict, deque
-from functools import partial
-import signal
-import os
-import threading
-from absl import logging
-import time
-import sys
-from typing import Callable
-from datetime import date
+import glob
 import logging
 import os
-from typing import Optional
+import random
+import signal
+import sys
+import threading
+import time
+from abc import ABC, abstractmethod
+from collections import defaultdict, deque
+from datetime import date
+from functools import partial
+from pathlib import Path
+from typing import Callable, Optional
+
+import numpy as np
+import torch
+from absl import logging
 
 todays_date = date.today()
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -58,11 +57,7 @@ class BaseActivationModule(ABC):
     def register_hooks(self):
         for name, module in self.model.named_modules():
             if name in self.activations_to_cache or self.activations_to_cache == "all":
-                hook_fn = (
-                    self.hook_fn
-                    if self.hook_fn is not None
-                    else self._get_caching_hook(name)
-                )
+                hook_fn = self.hook_fn if self.hook_fn is not None else self._get_caching_hook(name)
                 forward_hook = module.register_forward_hook(hook_fn)
                 self.hooks.append(forward_hook)
 
@@ -106,9 +101,7 @@ def dist_logging(message, rank=0):
 def get_checkpoint_to_start_from(checkpoint_path):
     all_checkpoints = glob.glob(f"{checkpoint_path}*")
     candidate_checkpoints = [
-        x
-        for x in all_checkpoints
-        if ".dist." not in x and ".nan." not in x and ".jump." not in x
+        x for x in all_checkpoints if ".dist." not in x and ".nan." not in x and ".jump." not in x
     ]
 
     if candidate_checkpoints:
@@ -204,9 +197,7 @@ class Metadata(BaseMetadata):
         self["epoch"] = 0
 
     def get_standard_metrics(self, rank, step, get_timings=True, get_memory=True):
-        items = [
-            f"rank {rank}, epoch {self['epoch']}, step {step}, loss {self['loss']:.3f}"
-        ]
+        items = [f"rank {rank}, epoch {self['epoch']}, step {step}, loss {self['loss']:.3f}"]
         if get_timings:
             for metric in self.history:
                 if metric.startswith("time_"):
@@ -237,9 +228,7 @@ class Metadata(BaseMetadata):
         for prefix in ["mem_fwd", "mem_bwd"]:
             for metric in ["peak_allocated", "allocated"]:
                 metric_data = np.array(self.history[f"{prefix}_{metric}"])
-                tb_logger.add_scalar(
-                    f"z_{prefix}/max_{metric}", metric_data.max(), step
-                )
+                tb_logger.add_scalar(f"z_{prefix}/max_{metric}", metric_data.max(), step)
 
         peak_reserved = np.array(self.history["mem_fwd_peak_reserved"])
         tb_logger.add_scalar("z_mem_fwd/mean_peak_reserved", peak_reserved.mean(), step)
@@ -311,9 +300,7 @@ def dump(state, expdir, checkpoint_out, global_rank=0, exit_out=True):
             target.unlink(missing_ok=True)
 
         if exit_out is True:
-            print(
-                "Killing all processes after 10 seconds - they will correctly exit with status 1"
-            )
+            print("Killing all processes after 10 seconds - they will correctly exit with status 1")
             time.sleep(10)  # Give other processes more time to save out.
             sys.exit(1)
 

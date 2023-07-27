@@ -1,34 +1,33 @@
-import numpy as np
-import torch
-import whisper
-
-from absl import app, flags, logging
-from torch.cuda.amp import autocast
-from torch.optim import RAdam
-from torch.nn.functional import interpolate
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 from math import inf
 from time import perf_counter
 
-from probes.train.dataset import MultiClassDataset, collate_fn
-from global_whisper_utils import WhisperActivationCache
-from probes.train.probe_model import Probe
+import numpy as np
+import torch
+import whisper
+from absl import app, flags, logging
 from base_train import train_init
 from global_utils import (
-    load_checkpoint,
-    save_checkpoint,
-    save_model,
     Metadata,
     device,
+    dist_logging,
     dump_checkpoint_on_kill,
+    load_checkpoint,
     prepare_tb_logging,
+    save_checkpoint,
+    save_model,
     set_seeds,
     snapshot_memory_usage,
-    dist_logging,
 )
+from global_whisper_utils import WhisperActivationCache
+from probes.train.dataset import MultiClassDataset, collate_fn
+from probes.train.probe_model import Probe
+from torch.cuda.amp import autocast
+from torch.nn.functional import interpolate
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.optim import RAdam
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data.distributed import DistributedSampler
 from whisper_repo.model import Whisper
 
 torch.backends.cudnn.benchmark = True
@@ -42,9 +41,7 @@ flags.DEFINE_boolean(
     True,
     "state if an learning rate scheduler is required during training",
 )
-flags.DEFINE_float(
-    "scheduler_decay", 1.0 / 3, "proportion of training steps over which lr decays"
-)
+flags.DEFINE_float("scheduler_decay", 1.0 / 3, "proportion of training steps over which lr decays")
 flags.DEFINE_float("clip_thresh", 1.0, "value to clip gradients to")
 
 # Regularization
@@ -56,9 +53,7 @@ flags.DEFINE_integer(
     "used to determine the number of training steps if not specified",
 )
 flags.DEFINE_string("probe_layer", None, "layer of base model to train probe on")
-flags.DEFINE_integer(
-    "head_idx", None, "if not None, will only use that specific attn head output"
-)
+flags.DEFINE_integer("head_idx", None, "if not None, will only use that specific attn head output")
 flags.DEFINE_integer("seq_len", None, "Used to 'convolve' over the sequence length")
 flags.DEFINE_string("whisper_model", "tiny", "which whisper model to use")
 flags.DEFINE_integer("val_samples", 100, "Number of samples to validate on")
@@ -91,12 +86,8 @@ def validate(
     frames_seen = 0
     accs = []
 
-    val_dataset = MultiClassDataset(
-        sql_path=FLAGS.val_data, num_entries=FLAGS.val_samples
-    )
-    val_loader = iter(
-        torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args)
-    )
+    val_dataset = MultiClassDataset(sql_path=FLAGS.val_data, num_entries=FLAGS.val_samples)
+    val_loader = iter(torch.utils.data.DataLoader(val_dataset, shuffle=True, **dataloader_args))
     # reset random seed for deterministic validation
     for data, labels in val_loader:
         data, labels = data.to(device), labels.to(device)
@@ -163,9 +154,7 @@ def train(FLAGS, global_rank=0):
     memory_usage = snapshot_memory_usage()
     tb_logger = prepare_tb_logging(FLAGS.expdir)
     if memory_usage is not None:
-        dist_logging(
-            f"pretrain_mem {memory_usage['allocated']:.5f}GB", rank=global_rank
-        )
+        dist_logging(f"pretrain_mem {memory_usage['allocated']:.5f}GB", rank=global_rank)
 
     if FLAGS.model_out is None:
         FLAGS.model_out = FLAGS.expdir + "/model"
@@ -197,15 +186,11 @@ def train(FLAGS, global_rank=0):
             train_dataset, rank=global_rank, drop_last=True, shuffle=True
         )
         train_loader = iter(
-            torch.utils.data.DataLoader(
-                train_dataset, sampler=train_sampler, **dataloader_kwargs
-            )
+            torch.utils.data.DataLoader(train_dataset, sampler=train_sampler, **dataloader_kwargs)
         )
     else:
         train_loader = iter(
-            torch.utils.data.DataLoader(
-                train_dataset, shuffle=True, **dataloader_kwargs
-            )
+            torch.utils.data.DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
         )
 
     # Object that contains the main state of the train loop
@@ -250,9 +235,7 @@ def train(FLAGS, global_rank=0):
             with autocast():
                 start_time = perf_counter()
                 whisper_model.forward(data)
-                activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(
-                    device
-                )
+                activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(device)
                 if FLAGS.head_idx is not None:
                     activations = activations[:, :, FLAGS.head_idx, :]
                     attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
@@ -280,38 +263,24 @@ def train(FLAGS, global_rank=0):
         meta.snapshot_memory_usage("mem_bwd")
 
         if state["step"] % FLAGS.log_every == 0 and global_rank == 0:
-            dist_logging(
-                f"step {state['step']}, loss {loss.item():.3f}", rank=global_rank
-            )
+            dist_logging(f"step {state['step']}, loss {loss.item():.3f}", rank=global_rank)
 
             # log training losses
             if state["step"] % FLAGS.log_tb_every == 0 and global_rank == 0:
                 tb_logger.add_scalar("train/loss", loss, state["step"])
-                tb_logger.add_scalar(
-                    "train/lr", scheduler.get_last_lr()[0], state["step"]
-                )
+                tb_logger.add_scalar("train/lr", scheduler.get_last_lr()[0], state["step"])
                 data_seen_hours = (
-                    (
-                        state["total_speech_seconds_seen"]
-                        + state["total_non_speech_seconds_seen"]
-                    )
+                    (state["total_speech_seconds_seen"] + state["total_non_speech_seconds_seen"])
                     / 60.0
                     / 60.0
                 )
                 speech_frac = (
                     state["total_speech_seconds_seen"]
-                    / (
-                        state["total_non_speech_seconds_seen"]
-                        + state["total_speech_seconds_seen"]
-                    )
+                    / (state["total_non_speech_seconds_seen"] + state["total_speech_seconds_seen"])
                     * 100
                 )
-                tb_logger.add_scalar(
-                    "train/data_seen_(hrs)", data_seen_hours, state["step"]
-                )
-                tb_logger.add_scalar(
-                    "train/speech_percentage", speech_frac, state["step"]
-                )
+                tb_logger.add_scalar("train/data_seen_(hrs)", data_seen_hours, state["step"])
+                tb_logger.add_scalar("train/speech_percentage", speech_frac, state["step"])
                 # log timings but ignoring first step
                 if state["step"] > 1:
                     meta.log_tb_timings(tb_logger, state["step"])

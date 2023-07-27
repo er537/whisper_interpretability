@@ -1,8 +1,9 @@
-import torch
-import sqlite3 as sqlite
 import logging
 import os
+import sqlite3 as sqlite
 from pathlib import Path
+
+import torch
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -51,8 +52,7 @@ class ActivationDataset(torch.utils.data.Dataset):
             os.mkdir(dir_path)
         with sqlite.connect(f"{self.sql_path}") as conn:
             create_str = (
-                "CREATE TABLE IF NOT EXISTS "
-                "data(key TEXT PRIMARY KEY, activations_path TEXT)"
+                "CREATE TABLE IF NOT EXISTS " "data(key TEXT PRIMARY KEY, activations_path TEXT)"
             )
             logging.info("Generating SQLITE db from utterances")
             cur = conn.cursor()

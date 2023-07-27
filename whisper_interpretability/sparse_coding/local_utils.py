@@ -1,7 +1,8 @@
-import torch
 from typing import Optional
 
+import torch
 from global_utils import device
+
 
 def get_features(feature_type: str = "learnt", chk_path: Optional[str] = None):
     """
