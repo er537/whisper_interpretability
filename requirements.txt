@@ -6,6 +6,7 @@ pre-commit
 pylint
 isort==5.10.1
 mypy
+jaxtyping
 
 # whisper_interpretability
 absl-py

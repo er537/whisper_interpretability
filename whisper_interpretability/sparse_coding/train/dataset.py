@@ -15,12 +15,12 @@ def collate_fn(batch):
 class ActivationDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",
+        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",  # noqa E501
         rebuild_sql: bool = False,
     ):
         """
-        Takes a file (dbl) containing a list of file paths to saved out activations, builds an sql and
-        randomly samples them
+        Takes a file (dbl) containing a list of file paths to saved out activations,
+        builds an sql and randomly samples them
         """
         super().__init__()
         self.sql_path = f"{dbl_path.strip('.dbl')}.sql"

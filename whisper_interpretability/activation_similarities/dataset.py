@@ -35,7 +35,7 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
         audio_samples_per_class=48_0000,
         dblx_path="/data/artefacts/vad/top_4_no_header/filtered/filtered_train.dblx",
         class_labels=["SPEECH"],
-        pad=True,  ## pad/trim for Whisper
+        pad=True,  # pad/trim for Whisper
     ):
         super().__init__()
         self.data = {class_label: torch.empty(0) for class_label in class_labels}
@@ -48,7 +48,6 @@ class ClasswiseDataset(torch.utils.data.IterableDataset):
         """
         Fill self.samples with audio_samples_per_class
         """
-        # TODO: this is kinda inefficient as we parse every audio file even if that class if already 'full'
         with open(dblx_path, "r") as f:
             completed = False
             while not completed:

@@ -175,7 +175,7 @@ def train(FLAGS, global_rank=0):
         for _ in range(FLAGS.grad_acc_steps):
             try:
                 activations = next(train_loader).to(device)
-            except:
+            except StopIteration:
                 train_loader = iter(
                     torch.utils.data.DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
                 )

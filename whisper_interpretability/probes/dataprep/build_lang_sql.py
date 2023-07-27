@@ -4,7 +4,7 @@ import sqlite3 as sqlite
 import fire
 
 """
-Creates an sql table from 
+Creates an sql table from dblx files of one or more languages
 """
 
 
@@ -12,7 +12,7 @@ def init_sql(sql_path):
     with sqlite.connect(f"{sql_path}") as conn:
         create_str = (
             "CREATE TABLE IF NOT EXISTS "
-            "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"
+            "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"  # noqa: E501
         )
         logging.info("Generating SQLITE db from utterances")
         cur = conn.cursor()

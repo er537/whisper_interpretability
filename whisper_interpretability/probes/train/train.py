@@ -97,7 +97,6 @@ def validate(
             activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(device)
             if FLAGS.head_idx is not None:
                 activations = activations[:, :, FLAGS.head_idx, :]
-                attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
             whisper_model.reset_state()
             pred = model(activations)
             labels = resample_labels(labels, pred)
@@ -238,7 +237,6 @@ def train(FLAGS, global_rank=0):
                 activations = whisper_model.activations[f"{FLAGS.probe_layer}"].to(device)
                 if FLAGS.head_idx is not None:
                     activations = activations[:, :, FLAGS.head_idx, :]
-                    attn_scores = attn_scores[:, :, FLAGS.head_idx, :]
                 whisper_model.reset_state()
                 pred = dist_model(activations)  # bsz, seq_len, n_classes
                 labels = resample_labels(labels, pred)

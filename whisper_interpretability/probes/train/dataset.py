@@ -1,15 +1,14 @@
-import torch
-import whisper_repo
 import sqlite3 as sqlite
 import warnings
+
+import torch
+import whisper_repo
+from global_whisper_utils import load_audio, trim_audio
 from torch.nn.utils.rnn import pad_sequence
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning
 )  # whisper.log_mel_spectrogram generates a verbose warning
-
-
-from global_whisper_utils import load_audio, trim_audio
 
 
 def collate_fn(batch):
@@ -26,7 +25,7 @@ class MultiClassDataset(torch.utils.data.Dataset):
         num_entries,
         sql_path="/home/ellenar/probes/fr_de_train.sql",
         class_labels=["fr", "de"],
-        pad=True,  ## pad/trim for Whisper
+        pad=True,  # pad/trim for Whisper
         audio_ret_type="mfcc",  # mfcc or waveform
     ):
         """

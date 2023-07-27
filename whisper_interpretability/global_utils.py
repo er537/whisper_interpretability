@@ -16,7 +16,8 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-from absl import logging
+from jaxtyping import Float
+from torch import Tensor
 
 todays_date = date.today()
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,7 +35,8 @@ class BaseActivationModule(ABC):
         activations_to_cache: list = ["all"],
     ):
         """
-        Base class using pytorch hooks to cache all intermediate activations in [activations_to_cache]
+        Base class using pytorch hooks to cache all intermediate
+        activations in [activations_to_cache]
         Parent classes should inherit from this class, implementing their own custom_forward method
         You can optionally pass in your own hook_fn
         """
@@ -46,8 +48,7 @@ class BaseActivationModule(ABC):
         self.activations_to_cache = activations_to_cache
         self.hook_fn = hook_fn
 
-    def forward(self, x: torch.tensor):
-        # x: (bsz, seq_len, n_mels)
+    def forward(self, x: Float[Tensor, "bsz, seq_len, n_mels"]):  # noqa: F821
         self.model.zero_grad()
         self.step += 1
         self.register_hooks()
@@ -75,7 +76,9 @@ class BaseActivationModule(ABC):
         self.hooks = []
 
     @abstractmethod
-    def custom_forward(self, dataloader, model: torch.nn.Module) -> dict:
+    def custom_forward(
+        self, model: torch.nn.Module, mels: Float[Tensor, "bsz, seq_len, n_mels"]  # noqa: F821
+    ):
         """
         Should be overidden inside child class to match specific model.
         """

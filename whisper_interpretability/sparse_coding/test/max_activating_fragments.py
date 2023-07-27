@@ -25,8 +25,8 @@ OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}_LibriSpe
 """
 Find the max activating dataset examples for every feature in dictionary
 Features are either:
-- 'learnt' by sparse coding, 
-- the neuron basis 
+- 'learnt' by sparse coding,
+- the neuron basis
 - a random orthogonal basis
 """
 
@@ -40,7 +40,7 @@ def get_feature_activations(
         "decoder.token_embedding",
     ],
     batch_size=100,
-    chk_path: str = "/exp/ellenar/sparse_coding/train/20230726_whisper_tiny_decoder.token_embedding_n_dict_components_2000_l1_alpha_5e-5_LibriSpeech/models/checkpoint.pt.step5000",
+    chk_path: str = "/exp/ellenar/sparse_coding/train/20230726_whisper_tiny_decoder.token_embedding_n_dict_components_2000_l1_alpha_5e-5_LibriSpeech/models/checkpoint.pt.step5000",  # noqa E501
     feature_type: str = "learnt",
     dataset_name: str = "am",
     k: int = 10,
@@ -80,7 +80,8 @@ def get_feature_activations(
             for i, audio_path in enumerate(audio_paths):
                 tokens = output[i].tokens
                 for feature_idx in range(batch_feature_activations.shape[-1]):
-                    # for every feature_activation, maybe add it to the list of max activating fragments
+                    # for every feature_activation,
+                    # maybe add it to the list of max activating fragments
                     feature_activation_scores = batch_feature_activations[i, :, feature_idx]
                     featurewise_max_activating_fragments[feature_idx].heappushpop(
                         feature_activation_scores, audio_path, tokens
@@ -126,8 +127,8 @@ class MaxActivatingFragments(list):
             min_activation = heapq.heappushpop(self, max_activation)
             try:
                 del self.metadata[min_activation]
-            except:
-                KeyError
+            except KeyError:
+                pass
         else:
             heapq.heappush(self, max_activation)
 

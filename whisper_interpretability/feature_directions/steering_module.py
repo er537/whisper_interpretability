@@ -5,9 +5,9 @@ import whisper
 from global_utils import device
 
 """
-Module to 'steer' intermediete activations in Whisper. 
-Works by adding (steering_factor*mean activation) 
-of the first class in class_labels and subtracting to second class. 
+Module to 'steer' intermediete activations in Whisper.
+Works by adding (steering_factor*mean activation)
+of the first class in class_labels and subtracting to second class.
 Steering vectors must be precomputed and saved to disk - see save_mean_cls_activation
 """
 

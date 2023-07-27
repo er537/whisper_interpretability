@@ -10,8 +10,9 @@ import torch
 import torchaudio
 import whisper
 import whisper_repo
-from absl import logging
 from global_utils import BaseActivationModule, device
+from jaxtyping import Float
+from torch import Tensor
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning
@@ -127,11 +128,12 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         max_num_entries: int = 100,  # maximum number of audio samples in sql
-        sql_path: str = f"/exp/ellenar/sparse_coding/data/val_dbl.sql",
+        sql_path: str = "/exp/ellenar/sparse_coding/data/val_dbl.sql",
         split: str = "train",  # train or val
     ):
         """
-        Generate mels from (potentially padded) 30s chunks of audio in the format expected as input by whisper
+        Generate mels from (potentially padded) 30s chunks of audio
+        in the format expected as input by whisper
         We store the dataset in a saved sql for fast querying -
         Note - if the sql_path already exists we DO NOT rebuild it
         """
@@ -190,7 +192,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         with sqlite.connect(f"{self.sql_path}") as conn:
             create_str = (
                 "CREATE TABLE IF NOT EXISTS "
-                "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"
+                "data(key TEXT PRIMARY KEY, audio_path TEXT, label TEXT, start_time FLOAT, end_time FLOAT)"  # noqa E501
             )
             logging.info("Generating SQLITE db from utterances")
             cur = conn.cursor()
@@ -255,8 +257,9 @@ class WhisperActivationCache(BaseActivationModule):
             hook_fn=hook_fn,
         )
 
-    def custom_forward(self, model: torch.nn.Module, mels) -> dict:
-        # mels: (bsz, 80, 3000) where 80=num_mels and 3000=seq_len
+    def custom_forward(
+        self, model: torch.nn.Module, mels: Float[Tensor, "bsz, seq_len, n_mels"]
+    ):  # noqa: F821
         options = whisper.DecodingOptions(without_timestamps=False, fp16=(device == "cuda"))
         output = model.decode(mels, options)
         return output
