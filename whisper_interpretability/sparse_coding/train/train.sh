@@ -14,7 +14,7 @@ activation_layer=decoder.token_embedding
 train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/train/${activation_layer}/train.dbl
 val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/val/${activation_layer}/val.dbl
 n_dict_components=1536
-l1_alpha=5e-4
+l1_alpha=5e-5
 lr=4e-4
 batch_size=10
 n_gpus_per_node=1
@@ -34,7 +34,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/sparse_coding/train}
-experiment_suffix=${experiment_suffix:-whisper_tiny_${activation_layer}_n_dict_components_${n_dict_components}_l1_alpha_${l1_alpha}}
+experiment_suffix=${experiment_suffix:-whisper_tiny_${activation_layer}_n_dict_components_${n_dict_components}_l1_alpha_${l1_alpha}_LibriSpeech}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training Sparse Autoencoders"}"
 model_out_dir=${WORK_DIR}/models
