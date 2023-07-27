@@ -47,6 +47,7 @@ class BaseActivationModule(ABC):
         self.hook_fn = hook_fn
 
     def forward(self, x: torch.tensor):
+        # x: (bsz, seq_len, n_mels)
         self.model.zero_grad()
         self.step += 1
         self.register_hooks()
@@ -63,17 +64,8 @@ class BaseActivationModule(ABC):
 
     def _get_caching_hook(self, name):
         def hook(module, input, output):
-            if "decoder" in name:
-                if output.shape[1] > 1:
-                    del self.activations[f"{name}"]
-                    return
             output_ = output.detach().cpu()
-            if name in self.activations:
-                self.activations[f"{name}"] = torch.cat(
-                    (self.activations[f"{name}"], output_), dim=1
-                )
-            else:
-                self.activations[f"{name}"] = output_
+            self.activations[f"{name}"] = output_
 
         return hook
 

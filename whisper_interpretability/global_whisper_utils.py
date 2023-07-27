@@ -256,6 +256,25 @@ class WhisperActivationCache(BaseActivationModule):
         )
 
     def custom_forward(self, model: torch.nn.Module, mels) -> dict:
+        # mels: (bsz, 80, 3000) where 80=num_mels and 3000=seq_len
         options = whisper.DecodingOptions(without_timestamps=False, fp16=(device == "cuda"))
         output = model.decode(mels, options)
         return output
+
+    def _get_caching_hook(self, name):
+        # custom caching function for whisper
+        def hook(module, input, output):
+            if "decoder" in name:
+                # we don't cache the first activations that correspond to the sos/lang tokens
+                if output.shape[1] > 1:
+                    del self.activations[f"{name}"]
+                    return
+            output_ = output.detach().cpu()
+            if name in self.activations:
+                self.activations[f"{name}"] = torch.cat(
+                    (self.activations[f"{name}"], output_), dim=1
+                )
+            else:
+                self.activations[f"{name}"] = output_
+
+        return hook
