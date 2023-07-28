@@ -7,7 +7,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from absl import flags, logging
-
 from global_utils import device, get_checkpoint_to_start_from
 
 """
