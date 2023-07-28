@@ -5,12 +5,10 @@ from typing import Optional
 
 import fire
 import torch
+
 from global_utils import device, todays_date
-from global_whisper_utils import (
-    LibriSpeechDataset,
-    WhisperActivationCache,
-    WhisperMelsDataset,
-)
+from global_whisper_utils import (LibriSpeechDataset, WhisperActivationCache,
+                                  WhisperMelsDataset)
 
 MODEL_NAME = "tiny"
 OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}"

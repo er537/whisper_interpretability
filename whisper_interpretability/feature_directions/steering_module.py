@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import torch
 import whisper
+
 from global_utils import device
 
 """

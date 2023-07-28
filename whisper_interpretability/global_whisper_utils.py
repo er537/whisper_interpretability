@@ -9,10 +9,11 @@ import numpy as np
 import torch
 import torchaudio
 import whisper
-import whisper_repo
-from global_utils import BaseActivationModule, device
 from jaxtyping import Float
 from torch import Tensor
+
+import whisper_repo
+from global_utils import BaseActivationModule, device
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning

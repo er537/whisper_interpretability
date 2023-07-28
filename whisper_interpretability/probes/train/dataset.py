@@ -2,9 +2,10 @@ import sqlite3 as sqlite
 import warnings
 
 import torch
+from torch.nn.utils.rnn import pad_sequence
+
 import whisper_repo
 from global_whisper_utils import load_audio, trim_audio
-from torch.nn.utils.rnn import pad_sequence
 
 warnings.filterwarnings(
     action="ignore", category=UserWarning

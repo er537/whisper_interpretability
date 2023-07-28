@@ -3,6 +3,7 @@ import json
 import fire
 import numpy as np
 import torch
+
 from activation_similarities.activation_module import WhipserActivationModule
 
 

@@ -5,25 +5,19 @@ from time import perf_counter
 import numpy as np
 import torch
 from absl import app, flags, logging
-from base_train import train_init
-from global_utils import (
-    Metadata,
-    device,
-    dist_logging,
-    dump_checkpoint_on_kill,
-    load_checkpoint,
-    prepare_tb_logging,
-    save_checkpoint,
-    set_seeds,
-    snapshot_memory_usage,
-)
-from sparse_coding.train.autoencoder import AutoEncoder
-from sparse_coding.train.dataset import ActivationDataset, collate_fn
 from torch.cuda.amp import autocast
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import RAdam
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data.distributed import DistributedSampler
+
+from base_train import train_init
+from global_utils import (Metadata, device, dist_logging,
+                          dump_checkpoint_on_kill, load_checkpoint,
+                          prepare_tb_logging, save_checkpoint, set_seeds,
+                          snapshot_memory_usage)
+from sparse_coding.train.autoencoder import AutoEncoder
+from sparse_coding.train.dataset import ActivationDataset, collate_fn
 
 torch.backends.cudnn.benchmark = True
 logging.set_verbosity(logging.INFO)

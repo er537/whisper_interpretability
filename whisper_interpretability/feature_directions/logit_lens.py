@@ -3,14 +3,12 @@ from collections import defaultdict
 import numpy as np
 import torch
 import whisper
-from global_utils import device
-from global_whisper_utils import (
-    MULTILANG_DBLX_DICT,
-    WhisperActivationCache,
-    get_mels_from_dblx,
-)
 from rich.console import Console
 from rich.table import Table
+
+from global_utils import device
+from global_whisper_utils import (MULTILANG_DBLX_DICT, WhisperActivationCache,
+                                  get_mels_from_dblx)
 from whisper_repo import Whisper
 from whisper_repo.tokenizer import get_tokenizer
 

@@ -7,14 +7,12 @@ from functools import partial
 
 import fire
 import torch
-from global_utils import device
-from global_whisper_utils import (
-    LibriSpeechDataset,
-    WhisperActivationCache,
-    WhisperMelsDataset,
-)
-from sparse_coding.local_utils import get_features
 from torch import nn
+
+from global_utils import device
+from global_whisper_utils import (LibriSpeechDataset, WhisperActivationCache,
+                                  WhisperMelsDataset)
+from sparse_coding.local_utils import get_features
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
