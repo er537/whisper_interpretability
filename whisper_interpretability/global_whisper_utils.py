@@ -18,6 +18,9 @@ warnings.filterwarnings(
     action="ignore", category=UserWarning
 )  # whisper.log_mel_spectrogram generates a verbose warning
 
+"""
+A collection of functions specifically related to whisper commonly used throughout the repo
+"""
 EN_TRAIN_DBLX_DICT = {
     "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx",
     "en",
