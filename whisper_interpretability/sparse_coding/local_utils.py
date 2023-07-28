@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-
 from global_utils import device
 
 

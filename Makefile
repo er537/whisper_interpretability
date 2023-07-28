@@ -12,6 +12,6 @@ check:
 	pylint **/*.py
 format:
 	black .
-	isort --profile black **/*.py
+	isort --profile black **/*/*.py
 test:
 	pytest -v

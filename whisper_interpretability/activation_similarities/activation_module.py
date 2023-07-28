@@ -1,5 +1,4 @@
 import torch
-
 import whisper_repo
 from activation_similarities.dataset import ClasswiseDataset
 from global_utils import BaseActivationModule, device

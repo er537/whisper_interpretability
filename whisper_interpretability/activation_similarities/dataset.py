@@ -3,7 +3,6 @@ import os
 import numpy as np
 import torch
 import torchaudio
-
 import whisper_repo
 from global_utils import device, load_audio, trim_audio
 

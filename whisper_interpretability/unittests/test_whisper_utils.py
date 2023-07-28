@@ -1,6 +1,5 @@
 import pytest
 import torch
-
 from global_whisper_utils import WhisperActivationCache
 
 
