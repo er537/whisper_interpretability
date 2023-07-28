@@ -22,7 +22,7 @@ class AutoEncoder(nn.Module):
         # No need to define a Linear layer for the encoder as its weights are tied with the decoder
         self.encoder = nn.Sequential(nn.ReLU())
 
-    def forward(self, x: Float[Tensor, "bsz, seq_len, d_model"]):  # noqa: F821
+    def forward(self, x: Float[Tensor, "bsz seq_len d_model"]):  # noqa: F821
         # Apply unit norm constraint to the decoder weights
         self.decoder.weight.data = nn.functional.normalize(self.decoder.weight.data, dim=0)
         c = self.encoder(x @ self.decoder.weight + self.encoder_bias)
