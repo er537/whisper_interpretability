@@ -10,8 +10,7 @@ import torch
 from torch import nn
 
 from global_utils import device
-from global_whisper_utils import (LibriSpeechDataset, WhisperActivationCache,
-                                  WhisperMelsDataset)
+from global_whisper_utils import LibriSpeechDataset, WhisperActivationCache, WhisperMelsDataset
 from sparse_coding.local_utils import get_features
 from whisper_repo.tokenizer import get_tokenizer
 

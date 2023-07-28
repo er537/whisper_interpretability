@@ -12,10 +12,17 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data.distributed import DistributedSampler
 
 from base_train import train_init
-from global_utils import (Metadata, device, dist_logging,
-                          dump_checkpoint_on_kill, load_checkpoint,
-                          prepare_tb_logging, save_checkpoint, set_seeds,
-                          snapshot_memory_usage)
+from global_utils import (
+    Metadata,
+    device,
+    dist_logging,
+    dump_checkpoint_on_kill,
+    load_checkpoint,
+    prepare_tb_logging,
+    save_checkpoint,
+    set_seeds,
+    snapshot_memory_usage,
+)
 from sparse_coding.train.autoencoder import AutoEncoder
 from sparse_coding.train.dataset import ActivationDataset, collate_fn
 

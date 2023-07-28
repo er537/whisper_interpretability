@@ -14,10 +14,18 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data.distributed import DistributedSampler
 
 from base_train import train_init
-from global_utils import (Metadata, device, dist_logging,
-                          dump_checkpoint_on_kill, load_checkpoint,
-                          prepare_tb_logging, save_checkpoint, save_model,
-                          set_seeds, snapshot_memory_usage)
+from global_utils import (
+    Metadata,
+    device,
+    dist_logging,
+    dump_checkpoint_on_kill,
+    load_checkpoint,
+    prepare_tb_logging,
+    save_checkpoint,
+    save_model,
+    set_seeds,
+    snapshot_memory_usage,
+)
 from global_whisper_utils import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset, collate_fn
 from probes.train.probe_model import Probe
