@@ -1,5 +1,5 @@
 # whisper_interpretability
-# NB) This repo is part of ongoing research and thus is not guaranteed to always be in a working state
+### NB) This repo is part of ongoing research and thus is not guaranteed to always be in a working state
 
 To get started clone the repo and make a venv:
 python3 -m venv ./venv
