@@ -45,7 +45,7 @@ flags.DEFINE_float("weight_decay", 0.0, "weight decay to use for training")
 
 # Sparse Coding hyperparams
 flags.DEFINE_integer("n_dict_components", None, "number of components in Sparse Dictionary")
-flags.DEFINE_float("recon_alpha", 1e-5, "multiplier for the l1 'sparsity' component of the loss")
+flags.DEFINE_float("recon_alpha", 1e5, "multiplier for the reconsturction component of the loss")
 flags.mark_flag_as_required("n_dict_components")
 
 
