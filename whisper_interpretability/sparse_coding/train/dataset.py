@@ -2,9 +2,53 @@ import logging
 import os
 import sqlite3 as sqlite
 from pathlib import Path
-
+import whisper
 import torch
 from torch.nn.utils.rnn import pad_sequence
+
+from whisper_repo.tokenizer import get_tokenizer
+from global_utils import device
+
+tokenizer = get_tokenizer(multilingual=False)
+
+WORDS = [
+    " high",
+    " low",
+    " hello",
+    " hi",
+    " computer",
+    "Computer",
+    " scream",
+    " dream",
+    " seat",
+    " feet",
+    " walk",
+    " talk",
+    " on",
+    " in",
+    " when",
+    " where",
+    " big",
+    " small",
+    " day",
+    " night",
+    " happy",
+    " good",
+    " up",
+    " down",
+    " book",
+    " group",
+    " day",
+    " way",
+    " light",
+    " white",
+    " fast",
+    " first",
+    " angry",
+    " hungry",
+    " old",
+    " new",
+]
 
 
 def collate_fn(batch):
@@ -69,3 +113,24 @@ class ActivationDataset(torch.utils.data.Dataset):
     def __len__(self):
         results = self.conn.execute("SELECT * from data").fetchall()
         return len(results)
+
+
+class TokenEmbeddingDataset(torch.utils.data.Dataset):
+    def __init__(self, words: list = WORDS, model_name: str = "tiny"):
+        super().__init__()
+        model = whisper.load_model(model_name)
+        for name, param in model.named_parameters():
+            if name == "decoder.token_embedding.weight":
+                self.embed_layer = param.to(device)
+        self.words = words
+        self.token_embeddings = []
+        for word in words:
+            token_idx = tokenizer.encode(word)
+            self.token_embeddings.append(self.embed_layer[token_idx, :])
+
+    def __getitem__(self, idx):
+        embed = self.token_embeddings[idx].detach()
+        return torch.nn.functional.normalize(embed, dim=1)
+
+    def __len__(self):
+        return len(self.token_embeddings)

@@ -24,7 +24,7 @@ from global_utils import (
     snapshot_memory_usage,
 )
 from sparse_coding.train.autoencoder import AutoEncoder
-from sparse_coding.train.dataset import ActivationDataset, collate_fn
+from sparse_coding.train.dataset import ActivationDataset, collate_fn, TokenEmbeddingDataset
 
 torch.backends.cudnn.benchmark = True
 logging.set_verbosity(logging.INFO)
@@ -45,14 +45,8 @@ flags.DEFINE_float("weight_decay", 0.0, "weight decay to use for training")
 
 # Sparse Coding hyperparams
 flags.DEFINE_integer("n_dict_components", None, "number of components in Sparse Dictionary")
-flags.DEFINE_string(
-    "activation_layer",
-    None,
-    "which layer of the base models internal activations to use",
-)
-flags.DEFINE_float("l1_alpha", 1e-3, "multiplier for the l1 'sparsity' component of the loss")
+flags.DEFINE_float("recon_alpha", 1e-5, "multiplier for the l1 'sparsity' component of the loss")
 flags.mark_flag_as_required("n_dict_components")
-flags.mark_flag_as_required("activation_layer")
 
 
 def validate(
@@ -92,7 +86,8 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
+    # train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
+    train_dataset = TokenEmbeddingDataset()
     feat_dim = next(iter(train_dataset)).shape[-1]
     model = AutoEncoder(feat_dim, FLAGS.n_dict_components).to(device)
     if FLAGS.n_devices > 1:
@@ -180,14 +175,15 @@ def train(FLAGS, global_rank=0):
                 train_loader = iter(
                     torch.utils.data.DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
                 )
+                activations = next(train_loader).to(device)
             # Forward pass
             with autocast():
                 start_time = perf_counter()
                 pred, c = dist_model(activations)  # bsz, seq_len, n_classes
                 forward_time += perf_counter() - start_time
-                loss_recon = recon_loss_fn(pred, activations)
+                loss_recon = FLAGS.recon_alpha * recon_loss_fn(pred, activations)
                 loss_l1 = torch.norm(c, 1, dim=2).mean()
-                loss = loss_recon + FLAGS.l1_alpha * loss_l1
+                loss = loss_recon + loss_l1
                 losses_recon.append(loss_recon.item())
                 losses_l1.append(loss_l1.item())
                 meta.snapshot_memory_usage("mem_fwd")

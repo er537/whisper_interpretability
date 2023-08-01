@@ -147,9 +147,9 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         if not os.path.exists(sql_path):
             self._build_sql()
         else:
+            self.conn = sqlite.connect(sql_path)
             db_size = self.get_size_of_db()
             print(f"Total entries in sql={db_size}")
-        self.conn = sqlite.connect(sql_path)
 
     def _build_sql(self):
         """
@@ -186,6 +186,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
                         if entries_in_class == entries_per_class:
                             break
         assert total_entries <= self.max_num_entries
+        self.conn = sqlite.connect(self.sql_path)
         print(f"Total entries in sql={total_entries}")
 
     def _init_sql(self):
