@@ -4,27 +4,27 @@ set -euo pipefail
 WORK_ROOT=
 WORK_DIR=
 
-JOB_QUEUE="aml-gpu.q@b1,aml-gpu.q@b2,aml-gpu.q@b3"
+JOB_QUEUE="aml-gpu.q@b10"
 JOB_NAME=
 JOB_REASON=
 experiment_suffix=
 
 #Training hyperparameters
-activation_layer=decoder.token_embedding
-train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/train/${activation_layer}/train.dbl
-val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_LibriSpeech/val/${activation_layer}/val.dbl
-n_dict_components=1536
-l1_alpha=5e-5
+activation_layer=decoder.blocks.2.mlp.0
+train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/train/${activation_layer}/train.dbl
+val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/val/${activation_layer}/val.dbl
+n_dict_components=400
+recon_alpha=1e4
 lr=4e-4
-batch_size=10
+batch_size=100
 n_gpus_per_node=1
-steps=1000
+steps=20000
 grad_acc_steps=1
 
 #Logging
 log_every=10
 log_tb_every=10
-val_every=25
+val_every=100
 save_every=100
 
 . parse_options.sh || exit 1;
@@ -34,7 +34,7 @@ set -o pipefail
 # EXPERIMENT SETUP
 JOB_NAME=${JOB_NAME:-"train"}
 WORK_ROOT=${WORK_ROOT:-/exp/$(whoami)/sparse_coding/train}
-experiment_suffix=${experiment_suffix:-whisper_tiny_${activation_layer}_n_dict_components_${n_dict_components}_l1_alpha_${l1_alpha}_LibriSpeech}
+experiment_suffix=${experiment_suffix:-whisper_tiny_${activation_layer}_n_dict_components_${n_dict_components}_recon_alpha_${recon_alpha}_LibriSpeech}
 WORK_DIR=${WORK_DIR:-${WORK_ROOT}/$(date +"%Y%m%d")_$experiment_suffix}
 JOB_REASON="${JOB_REASON:-"Training Sparse Autoencoders"}"
 model_out_dir=${WORK_DIR}/models
@@ -104,9 +104,8 @@ if [[ ! -f ${WORK_DIR}/done_train ]]; then
     --checkpoint_autoload \
     --checkpoint_out ${model_out_dir}/checkpoint.pt \
     --model_out ${model_out_dir}/model.ts \
-    --activation_layer $activation_layer \
     --n_dict_components $n_dict_components \
-    --l1_alpha $l1_alpha
+    --recon_alpha $recon_alpha
       ret_val="\$?"
       case "\$ret_val" in
         0) touch ${WORK_DIR}/done_train ;;

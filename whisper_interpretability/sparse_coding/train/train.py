@@ -65,7 +65,7 @@ def validate(
         with torch.no_grad() and autocast():
             activations = activations.to(device)
             pred, c = model(activations)
-            losses_recon.append(recon_loss_fn(pred, activations).item())
+            losses_recon.append(FLAGS.recon_alpha * recon_loss_fn(pred, activations).item())
             losses_l1.append(torch.norm(c, 1, dim=2).mean().item())
 
     model.train()
@@ -86,8 +86,8 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    # train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
-    train_dataset = TokenEmbeddingDataset()
+    train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
+    # train_dataset = TokenEmbeddingDataset()
     feat_dim = next(iter(train_dataset)).shape[-1]
     model = AutoEncoder(feat_dim, FLAGS.n_dict_components).to(device)
     if FLAGS.n_devices > 1:

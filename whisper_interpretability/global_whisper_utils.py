@@ -22,12 +22,10 @@ warnings.filterwarnings(
 A collection of functions specifically related to whisper commonly used throughout the repo
 """
 EN_TRAIN_DBLX_DICT = {
-    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx",
-    "en",
+    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/train.dblx": "en",
 }
 EN_VAL_DBLX_DICT = {
-    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/valid.dblx",
-    "en",
+    "/data/artefacts/am/en/v2023.03_full_reseg/data_train/valid.dblx": "en",
 }
 
 MULTILANG_DBLX_DICT = {
@@ -145,6 +143,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
         self.sql_path = sql_path
         self.dblx_dict = EN_TRAIN_DBLX_DICT if split == "train" else EN_VAL_DBLX_DICT
         if not os.path.exists(sql_path):
+            print("Building sql")
             self._build_sql()
         else:
             self.conn = sqlite.connect(sql_path)

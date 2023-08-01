@@ -17,7 +17,6 @@ from whisper_repo.tokenizer import get_tokenizer
 tokenizer = get_tokenizer(multilingual=True)
 
 MODEL_NAME = "tiny"
-OUT_DIR = f"/exp/ellenar/sparse_coding/whisper_activations_{MODEL_NAME}_LibriSpeech"
 
 """
 Find the max activating dataset examples for every feature in dictionary
@@ -34,7 +33,7 @@ def get_feature_activations(
     max_num_entries: int = 0,
     sql_path: str = None,
     activations_to_cache: list = [
-        "decoder.token_embedding",
+        "decoder.blocks.2.mlp.0",
     ],
     batch_size=100,
     chk_path: str = "/exp/ellenar/sparse_coding/train/20230726_whisper_tiny_decoder.token_embedding_n_dict_components_2000_l1_alpha_5e-5_LibriSpeech/models/checkpoint.pt.step5000",  # noqa E501
