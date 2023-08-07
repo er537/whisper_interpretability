@@ -6,13 +6,6 @@ import numpy as np
 import torch
 import whisper
 from absl import app, flags, logging
-from torch.cuda.amp import autocast
-from torch.nn.functional import interpolate
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.optim import RAdam
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.utils.data.distributed import DistributedSampler
-
 from base_train import train_init
 from global_utils import (
     Metadata,
@@ -29,6 +22,12 @@ from global_utils import (
 from global_whisper_utils import WhisperActivationCache
 from probes.train.dataset import MultiClassDataset, collate_fn
 from probes.train.probe_model import Probe
+from torch.cuda.amp import autocast
+from torch.nn.functional import interpolate
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.optim import RAdam
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data.distributed import DistributedSampler
 from whisper_repo.model import Whisper
 
 torch.backends.cudnn.benchmark = True

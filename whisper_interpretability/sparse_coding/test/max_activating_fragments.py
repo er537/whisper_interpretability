@@ -7,11 +7,14 @@ from functools import partial
 
 import fire
 import torch
-from torch import nn
-
 from global_utils import device
-from global_whisper_utils import LibriSpeechDataset, WhisperActivationCache, WhisperMelsDataset
+from global_whisper_utils import (
+    LibriSpeechDataset,
+    WhisperActivationCache,
+    WhisperMelsDataset,
+)
 from sparse_coding.local_utils import get_features
+from torch import nn
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
@@ -36,7 +39,7 @@ def get_feature_activations(
         "decoder.blocks.2.mlp.0",
     ],
     batch_size=100,
-    chk_path: str = "/exp/ellenar/sparse_coding/train/20230726_whisper_tiny_decoder.token_embedding_n_dict_components_2000_l1_alpha_5e-5_LibriSpeech/models/checkpoint.pt.step5000",  # noqa E501
+    chk_path: str = "/exp/ellenar/sparse_coding/train/20230801_whisper_tiny_decoder.blocks.2.mlp.0_n_dict_components_400_recon_alpha_1e5_LibriSpeech/models/checkpoint.pt.step10900",  # noqa E501
     feature_type: str = "learnt",
     dataset_name: str = "am",
     k: int = 10,

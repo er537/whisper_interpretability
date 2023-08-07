@@ -77,7 +77,9 @@ class BaseActivationModule(ABC):
 
     @abstractmethod
     def custom_forward(
-        self, model: torch.nn.Module, mels: Float[Tensor, "bsz seq_len n_mels"]  # noqa: F821
+        self,
+        model: torch.nn.Module,
+        mels: Float[Tensor, "bsz seq_len n_mels"],  # noqa: F821
     ):
         """
         Should be overidden inside child class to match specific model.

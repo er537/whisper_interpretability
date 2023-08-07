@@ -2,12 +2,12 @@ import logging
 import os
 import sqlite3 as sqlite
 from pathlib import Path
-import whisper
-import torch
-from torch.nn.utils.rnn import pad_sequence
 
-from whisper_repo.tokenizer import get_tokenizer
+import torch
+import whisper
 from global_utils import device
+from torch.nn.utils.rnn import pad_sequence
+from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=False)
 

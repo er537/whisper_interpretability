@@ -1,9 +1,8 @@
-import whisper
 import torch
-
-from whisper_repo.model import Whisper
-from global_whisper_utils import load_audio, trim_audio
+import whisper
 from global_utils import device
+from global_whisper_utils import load_audio, trim_audio
+from whisper_repo.model import Whisper
 from whisper_repo.tokenizer import get_tokenizer
 
 tokenizer = get_tokenizer(multilingual=True)
