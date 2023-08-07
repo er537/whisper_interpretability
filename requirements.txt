@@ -1,15 +1,6 @@
-# dev
-pytest
-black==22.6.0
-flake8
-pylint
-isort==5.10.1
-mypy
-jaxtyping
-
-# whisper_interpretability
-absl-py
-openai-whisper
-torch
-torchvision
-torchaudio
+torch~=2.0.1
+torchvision~=0.15.2
+pydantic~=2.0
+wandb~=0.15.4
+fire~=0.5.0
+tqdm~=4.65.0
