@@ -48,20 +48,20 @@ def get_activations(
         elif split == "val":
             dataset = LibriSpeechDataset(url="dev-clean")
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=100))
-    for data, lang_codes, audio_paths in dataloader:
+    for batch_idx, (data, lang_codes, audio_paths) in enumerate(dataloader):
         actv_cache.reset_state()
         actv_cache.forward(data.to(device))
-        for layer in layer_to_cache:
-            layer_actvs = actv_cache.activations[f"{layer}"].to("cpu")
-            for i, (lang_code, audio_path) in enumerate(zip(lang_codes, audio_paths)):
-                out_path_ext = get_out_path_ext(audio_path=audio_path, lang_code=lang_code)
-                pathlib.Path(f"{OUT_DIR}_{dataset_name}/{split}/{layer}").mkdir(
-                    parents=True, exist_ok=True
-                )
-                torch.save(
-                    layer_actvs[i],
-                    f"{OUT_DIR}_{dataset_name}/{split}/{layer}/{todays_date}_{out_path_ext}.pt",
-                )
+        layer_actvs = actv_cache.activations[f"{layer_to_cache}"].to("cpu")
+        for i, (lang_code, audio_path) in enumerate(zip(lang_codes, audio_paths)):
+            out_path_ext = get_out_path_ext(audio_path=audio_path, lang_code=lang_code)
+            pathlib.Path(f"{OUT_DIR}_{dataset_name}/{split}/{layer_to_cache}").mkdir(
+                parents=True, exist_ok=True
+            )
+            torch.save(
+                layer_actvs[i],
+                f"{OUT_DIR}_{dataset_name}/{split}/{layer_to_cache}/{todays_date}_{out_path_ext}.pt",
+            )
+        print(f"Saved activations for batch {batch_idx}")
 
 
 def get_out_path_ext(audio_path, lang_code):

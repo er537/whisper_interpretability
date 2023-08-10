@@ -24,9 +24,9 @@ MODEL_NAME = "tiny"
 """
 Find the max activating dataset examples for every feature in dictionary
 Features are either:
-- 'learnt' by sparse coding,
-- the neuron basis
-- a random orthogonal basis
+- "learnt" by sparse coding,
+- "neuron_basis"
+- "rand_orth"
 """
 
 
@@ -36,7 +36,7 @@ def get_feature_activations(
     max_num_entries: int = 0,
     sql_path: str = None,
     activations_to_cache: list = [
-        "decoder.blocks.2.mlp.0",
+        "encoder.blocks.3",
     ],
     batch_size=100,
     chk_path: str = "/exp/ellenar/sparse_coding/train/20230801_whisper_tiny_decoder.blocks.2.mlp.0_n_dict_components_400_recon_alpha_1e5_LibriSpeech/models/checkpoint.pt.step10900",  # noqa E501

@@ -59,7 +59,7 @@ def collate_fn(batch):
 class ActivationDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",  # noqa E501
+        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",
         rebuild_sql: bool = False,
     ):
         """
