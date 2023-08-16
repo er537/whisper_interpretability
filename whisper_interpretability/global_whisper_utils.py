@@ -102,10 +102,10 @@ def load_audio(file: str, sample_rate_hz: int = 16_000):
 
 
 def get_mels_from_audio_path(
-    audio_path: str, start_time_s: Optional[float], end_time_s: Optional[float]
+    audio_path: str, start_time_s: Optional[float] = None, end_time_s: Optional[float] = None
 ):
     audio = whisper.load_audio(audio_path)
-    if start_time_s and end_time_s:
+    if start_time_s is not None and end_time_s is not None:
         audio = trim_audio(audio, start_time_s, end_time_s)
     audio = whisper_repo.pad_or_trim(audio.flatten())
     mels = torch.tensor(whisper_repo.log_mel_spectrogram(audio)).to(device)
@@ -225,13 +225,14 @@ class LibriSpeechDataset(torch.utils.data.Dataset):
         try:
             self.dataset = torchaudio.datasets.LIBRISPEECH(download=False, url=url, root=root)
         except RuntimeError:
+            print("Downloading dataset")
             self.dataset = torchaudio.datasets.LIBRISPEECH(download=True, url=url, root=root)
         self.root = root
 
     def __getitem__(self, idx):
         audio_path, sample_rate, transcript, *_ = self.dataset.get_metadata(idx)
-        mels = get_mels_from_audio_path(f"{self.root}/LibriSpeech/{audio_path}")
-        return mels, "en", audio_path
+        mels = get_mels_from_audio_path(audio_path=f"{self.root}/LibriSpeech/{audio_path}")
+        return mels, "en", f"{self.root}/LibriSpeech/{audio_path}"
 
     def __len__(self):
         return len(self.dataset)

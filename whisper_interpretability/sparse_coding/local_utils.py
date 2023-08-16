@@ -4,7 +4,9 @@ import torch
 from global_utils import device
 
 
-def get_features(feature_type: str = "learnt", chk_path: Optional[str] = None):
+def get_features(
+    feature_type: str = "learnt", chk_path: Optional[str] = None, feature_idx: int = None
+):
     """
     Inputs:
     feature_type: "learnt", "neuron_basis" or "rand_orth"
@@ -26,4 +28,7 @@ def get_features(feature_type: str = "learnt", chk_path: Optional[str] = None):
         encoder_bias = torch.zeros(encoder_weight.shape[0])
     else:
         raise Exception("type must be 'learnt', 'neuron_basis' or 'rand_orth'")
+    if feature_idx is not None:
+        feature = encoder_weight[:, feature_idx]  # [d_model]
+        return feature.to(device), encoder_bias[feature_idx].to(device)
     return encoder_weight.to(device), encoder_bias.to(device)

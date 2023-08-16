@@ -68,7 +68,10 @@ def get_feature_activations(
     )
     encoder_weight, encoder_bias = get_features(feature_type=feature_type, chk_path=chk_path)
     dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=batch_size))
+    i = 0
     for batch_idx, (data, lang_codes, audio_paths) in enumerate(dataloader):
+        if i > max_num_entries:
+            break
         actv_cache.reset_state()
         output = actv_cache.forward(data.to(device))
         for layer in activations_to_cache:
@@ -76,16 +79,17 @@ def get_feature_activations(
             batch_feature_activations = nn.ReLU()(
                 (layer_actvs.to(device).float() @ encoder_weight) + encoder_bias
             ).cpu()
-            for i, audio_path in enumerate(audio_paths):
-                tokens = output[i].tokens
+            for j, audio_path in enumerate(audio_paths):
+                tokens = output[j].tokens
                 for feature_idx in range(batch_feature_activations.shape[-1]):
                     # for every feature_activation,
                     # maybe add it to the list of max activating fragments
-                    feature_activation_scores = batch_feature_activations[i, :, feature_idx]
+                    feature_activation_scores = batch_feature_activations[j, :, feature_idx]
                     featurewise_max_activating_fragments[feature_idx].heappushpop(
                         feature_activation_scores, audio_path, tokens
                     )
         print(f"Processed batch {batch_idx} of size {batch_size}")
+        i += batch_size
     save_max_activating_fragments(featurewise_max_activating_fragments, out_path)
 
 
