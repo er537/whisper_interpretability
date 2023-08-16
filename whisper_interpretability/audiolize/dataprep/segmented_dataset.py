@@ -1,11 +1,12 @@
 # %%
 import json
 import os
+from collections import defaultdict
 
 import torch
 import whisper
 import whisper_repo
-from global_whisper_utils import device, trim_audio
+from global_whisper_utils import LibriSpeechDataset, device, load_audio
 
 splits_dir = "/data/artefacts/am_test/en/en-NSC/8356d08aa1761193ef0fe78462552d56/splits"
 json_dir = (
@@ -18,33 +19,21 @@ def collate_fn(batch):
     return mels, texts, wav_paths, start_times, end_times
 
 
-class SegmentedDataset(torch.utils.data.IterableDataset):
+class SegmentedLibriSpeechDataset(torch.utils.data.IterableDataset):
     def __init__(self, splits_dir: str = splits_dir, json_dir: str = json_dir):
         super().__init__()
-        self.splits_dir = splits_dir
-        self.json_dir = json_dir
+        self.LibriSpeech = iter(LibriSpeechDataset(return_mels=False))
 
     def __iter__(self):
-        for file in os.listdir(splits_dir):
-            split = file.split(".")[0]
-            with open(os.path.join(splits_dir, file), "r") as f:
-                wav_path = f.readline().split(" ")[1]
-                audio = whisper.load_audio(wav_path)
-            with open(os.path.join(json_dir, f"decode_rescore.{split}.json"), "r") as f:
-                json_data = json.load(f)
-                results = json_data["results"]
-                for i in range(len(results)):
-                    type_, content, start_time, end_time = (
-                        results[i]["type"],
-                        results[i]["alternatives"][0]["content"],
-                        results[i]["start_time"],
-                        results[i]["end_time"],
-                    )
-                    if type_ == "word":
-                        audio = trim_audio(audio, start_time, end_time)
-                        audio_seg = whisper.pad_or_trim(audio)
-                        mels = torch.tensor(whisper_repo.log_mel_spectrogram(audio_seg)).to(device)
-                        yield mels, content, wav_path, start_time, end_time
+        for audio_path in self.LibriSpeech:
+            audio = load_audio(audio_path)
+            # 8000 frame chunks -> 0.5s
+            chunk_size = 8000
+            for i in range(0, len(audio) - chunk_size, chunk_size):
+                audio_seg = audio[i : i + chunk_size]
+                audio_seg = whisper.pad_or_trim(audio_seg.flatten())
+                mels = torch.tensor(whisper.log_mel_spectrogram(audio_seg)).to(device)
+                yield mels, audio_path, i
 
     def __len__(self):
-        return len(os.listdir(splits_dir))
+        return len(self.LibriSpeech)

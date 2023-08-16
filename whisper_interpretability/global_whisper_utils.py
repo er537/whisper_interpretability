@@ -220,7 +220,7 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
 
 
 class LibriSpeechDataset(torch.utils.data.Dataset):
-    def __init__(self, root="/exp/ellenar/LibriSpeech", url="train-other-500"):
+    def __init__(self, root="/exp/ellenar/LibriSpeech", url="train-other-500", return_mels=True):
         super().__init__()
         try:
             self.dataset = torchaudio.datasets.LIBRISPEECH(download=False, url=url, root=root)
@@ -228,11 +228,15 @@ class LibriSpeechDataset(torch.utils.data.Dataset):
             print("Downloading dataset")
             self.dataset = torchaudio.datasets.LIBRISPEECH(download=True, url=url, root=root)
         self.root = root
+        self.return_mels = return_mels
 
     def __getitem__(self, idx):
         audio_path, sample_rate, transcript, *_ = self.dataset.get_metadata(idx)
-        mels = get_mels_from_audio_path(audio_path=f"{self.root}/LibriSpeech/{audio_path}")
-        return mels, "en", f"{self.root}/LibriSpeech/{audio_path}"
+        if self.return_mels:
+            mels = get_mels_from_audio_path(audio_path=f"{self.root}/LibriSpeech/{audio_path}")
+            return mels, "en", f"{self.root}/LibriSpeech/{audio_path}"
+        else:
+            return f"{self.root}/LibriSpeech/{audio_path}"
 
     def __len__(self):
         return len(self.dataset)
