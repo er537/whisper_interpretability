@@ -29,6 +29,7 @@ def get_activations(
     split: str = "train",  # train or val
     layer_to_cache: str = "decoder.token_embedding",
     dataset_name: str = "am",
+    batch_size: int = 100,
 ):
     if not device == "cuda":
         warnings.warn("This is much faster if you run it on a GPU")
@@ -47,7 +48,7 @@ def get_activations(
             dataset = LibriSpeechDataset(url="train-other-500")
         elif split == "val":
             dataset = LibriSpeechDataset(url="dev-clean")
-    dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=100))
+    dataloader = iter(torch.utils.data.DataLoader(dataset, batch_size=batch_size))
     for batch_idx, (data, lang_codes, audio_paths) in enumerate(dataloader):
         actv_cache.reset_state()
         actv_cache.forward(data.to(device))

@@ -19,8 +19,8 @@ def get_features(
     if feature_type == "learnt":
         encoder_bias = chk["model"]["encoder_bias"]
     elif feature_type == "neuron_basis":
-        encoder_weight = torch.eye(encoder_weight.shape[0], encoder_weight.shape[0])
-        encoder_bias = torch.zeros(encoder_weight.shape[0])
+        encoder_weight = torch.eye(1536, 1536)
+        encoder_bias = torch.zeros(1536)
     elif feature_type == "rand_orth":
         encoder_weight = torch.nn.init.orthogonal_(
             torch.empty(encoder_weight.shape[0], encoder_weight.shape[0])

@@ -69,6 +69,7 @@ class ActivationDataset(torch.utils.data.Dataset):
         super().__init__()
         self.sql_path = f"{dbl_path.strip('.dbl')}.sql"
         if not os.path.exists(self.sql_path) or rebuild_sql:
+            raise ValueError(f"SQL file {self.sql_path} does not exist")
             self._build_sql(dbl_path)
         self.conn = sqlite.connect(self.sql_path)
 

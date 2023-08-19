@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import sqlite3 as sqlite
 import warnings
 from subprocess import CalledProcessError, run
@@ -231,6 +232,7 @@ class LibriSpeechDataset(torch.utils.data.Dataset):
         self.return_mels = return_mels
 
     def __getitem__(self, idx):
+        idx = int(random.random() * len(self.dataset))  # randomly sample
         audio_path, sample_rate, transcript, *_ = self.dataset.get_metadata(idx)
         if self.return_mels:
             mels = get_mels_from_audio_path(audio_path=f"{self.root}/LibriSpeech/{audio_path}")
