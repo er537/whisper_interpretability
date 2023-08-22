@@ -1,3 +1,4 @@
+theme: minima
 lsi: false
 safe: true
 source: [your repo's top level directory]
