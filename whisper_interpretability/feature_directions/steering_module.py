@@ -17,6 +17,7 @@ class SteeringModule:
         self,
         activations_to_steer: list,
         model_name: str = "tiny",
+        model: torch.nn.Module = None,  # if you want to use a model other than the default
         steering_factor: float = 1.0,
         class_labels: list = [
             "fr",
@@ -25,7 +26,11 @@ class SteeringModule:
     ):
         self.model_name = model_name
         self.class_labels = class_labels
-        self.model = whisper.load_model(model_name).to(device)
+        if model is None:
+            self.model = whisper.load_model(model_name)
+        else:
+            self.model = model
+        self.model = self.model.to(device)
         self.activations_to_steer = activations_to_steer
         self.activation_dir = "/exp/ellenar/whisper_activations"
         self.hooks = []
@@ -70,10 +75,11 @@ def get_steering_hook(steering_cls_vector, true_cls_vector, steering_factor):
         Add the 'steering' class vector and subtract the 'true' class vector
         """
         output_ = output.detach()
-        return (
-            output_
-            + steering_factor * steering_cls_vector.half().to(device)
-            - steering_factor * true_cls_vector.half().to(device)
+        output_[:, :, :] = (
+            output_[:, :, :]
+            + (steering_factor * steering_cls_vector.half().to(device))
+            - (steering_factor * true_cls_vector.half().to(device))
         )
+        return output_
 
     return hook

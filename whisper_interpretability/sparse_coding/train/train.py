@@ -18,11 +18,7 @@ from global_utils import (
     snapshot_memory_usage,
 )
 from sparse_coding.train.autoencoder import AutoEncoder
-from sparse_coding.train.dataset import (
-    ActivationDataset,
-    TokenEmbeddingDataset,
-    collate_fn,
-)
+from sparse_coding.train.dataset import ActivationDataset, collate_fn
 from torch.cuda.amp import autocast
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import RAdam
@@ -89,7 +85,7 @@ def train(FLAGS, global_rank=0):
     torch.set_num_threads(1)
     set_seeds(FLAGS.seed)
 
-    train_dataset = ActivationDataset(dbl_path=FLAGS.train_data)
+    train_dataset = ActivationDataset(dbl_path=FLAGS.train_data, rank=global_rank)
     # train_dataset = TokenEmbeddingDataset()
     feat_dim = next(iter(train_dataset)).shape[-1]
     model = AutoEncoder(feat_dim, FLAGS.n_dict_components).to(device)
