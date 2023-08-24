@@ -3,7 +3,7 @@
 
 ## encoder.blocks.3.mlp.1 - Neuron Basis
 <details>
-<summary>Max activating audio samples for encoder.blocks.3.mlp.1 *neurons*>
+<summary>Max activating audio samples for encoder.blocks.3.mlp.1 *neurons*></summary>
 ### Neuron 4 ('said')
 <audio controls>
    <source src="audio/b3_mlp1_nb_4pkl_sample0.wav" type="audio/wav">
@@ -58,7 +58,7 @@
 
 ## encoder.blocks.2.mlp.1 - Neuron Basis
 <details>
-<summary>Max activating audio samples for encoder.blocks.2.mlp.1 *neurons*>
+<summary>Max activating audio samples for encoder.blocks.2.mlp.1 *neurons*></summary>
 ### Neuron 0 ('m')
 <audio controls>
    <source src="audio/b2_mlp1_nb_0pkl_sample3.wav" type="audio/wav">
