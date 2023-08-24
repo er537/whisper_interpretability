@@ -1,6 +1,6 @@
 ### Acoustic Features by Layer
 
-#### encoder.blocks.3.mlp.1 - Neuron Basis
+### encoder.blocks.3.mlp.1 - Neuron Basis
 ##### Neuron 4 ('said')
 <audio controls>
    <source src="audio/b3_mlp1_nb_4pkl_sample0.wav" type="audio/wav">
