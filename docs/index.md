@@ -1,5 +1,5 @@
 ### Audio clips
-Here's an audio clip:
+Here is an audio clip:
 
 <audio controls>
    <source src="b3_nb_4.wav" type="audio/wav">
