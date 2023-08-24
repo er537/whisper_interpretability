@@ -1,7 +1,5 @@
 
-
-
-### Acoustic Features by Layer
+# Acoustic Features
 
 ### encoder.blocks.3.mlp.1 - Neuron Basis
 ##### Neuron 4 ('said')
@@ -56,8 +54,6 @@
 
 
 
-### The decoder is a weak LM
+# The decoder is a weak LM
 
-### The encoder representations are very localized
-
-### Encoder Features
+# The encoder representations are very localized
