@@ -1,11 +1,10 @@
 
 # Acoustic Features
+We found max activating dataset examples for all of the neurons in the mlp layers of the encoder. By amplifying the sound around the point where the neuron is maximally active, we found these features to be highly interpretable. Below are examples of some of the features we found.
 
 ## encoder.blocks.3.mlp.1 - Neuron Basis
 <details>
-<summary>Max activating audio samples for encoder.blocks.3.mlp.1 neurons></summary>
-   
-### Neuron 4 ('said')
+<summary>Neuron 4 ('said')</summary>
 <audio controls>
    <source src="audio/b3_mlp1_nb_4pkl_sample0.wav" type="audio/wav">
    Your browser does not support the audio element.
@@ -22,8 +21,10 @@
    <source src="audio/b3_mlp1_nb_4pkl_sample8.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
+</details>
 
-### Neuron 9 ('w-A (like way/wait)')
+<details>
+<summary>Neuron 9 ('way/wait')</summary>
 <audio controls>
    <source src="audio/b3_mlp1_nb_9pkl_sample5.wav" type="audio/wav">
    Your browser does not support the audio element.
@@ -36,9 +37,10 @@
    <source src="audio/b3_mlp1_nb_9pkl_sample9.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
+</details>
 
-
-### Neuron 20 ('f')
+<details>
+<summary>Neuron 20 ('f')</summary>
 <audio controls>
    <source src="audio/b3_mlp1_nb_20pkl_sample0.wav" type="audio/wav">
    Your browser does not support the audio element.
