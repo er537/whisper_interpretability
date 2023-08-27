@@ -181,6 +181,67 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </audio>
 </details>
 
+## encoder.blocks.2 - Learnt using sparse autoencoder
+<details>
+<summary>Dictionary idx=3 ("an/in/on")</summary>
+<audio controls>
+   <source src="audio/b3_res_3pkl_sample1.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_3pkl_sample6.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_3pkl_sample9.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_3pkl_sample8.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Dictionary idx=4 ("I (eg time/try/I))</summary>
+<audio controls>
+   <source src="audio/b3_res_4pkl_sample3.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_4pkl_sample6.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_4pkl_sample9.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_4pkl_sample7.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Dictionary idx=6 ("l")</summary>
+<audio controls>
+   <source src="audio/b3_res_6pkl_sample0.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_6pkl_sample2.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_6pkl_sample9.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_6pkl_sample3.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
 
 # The decoder is a weak LM
 
