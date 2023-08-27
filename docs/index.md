@@ -1,6 +1,6 @@
 
 # Acoustic Features
-We found max activating dataset examples for all of the neurons in the mlp layers of the encoder. By amplifying the sound around the point where the neuron is maximally active, we found these features to be highly interpretable. Below are examples of some of the features we found.
+We found max activating dataset examples for all of the neurons in the mlp layers of the encoder. We also trained sparse autoencoders on the residual stream activations and found max activating dataset examples for these learnt features. By amplifying the sound around the point where the neuron/feature is maximally active, we found them to be highly interpretable. Below are examples of some of the features we found.
 
 ## encoder.blocks.3.mlp.1 - Neuron Basis
 <details>
@@ -116,6 +116,67 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </audio>
 <audio controls>
    <source src="audio/b2_mlp1_nb_3pkl_sample8.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+## encoder.blocks.3 - Learnt using sparse autoencoder
+<details>
+<summary>Dictionary idx=131 ("r")</summary>
+<audio controls>
+   <source src="audio/b3_res_131pkl_sample2.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_131pkl_sample7.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_131pkl_sample9.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_131pkl_sample8.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Dictionary idx=1 ("n")</summary>
+<audio controls>
+   <source src="audio/b3_res_1pkl_sample0.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_1pkl_sample1.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_1pkl_sample3.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_1pkl_sample8.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Dictionary idx=2 ("p")</summary>
+<audio controls>
+   <source src="audio/b3_res_2pkl_sample0.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_2pkl_sample2.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_2pkl_sample3.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b3_res_2pkl_sample9.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
 </details>
