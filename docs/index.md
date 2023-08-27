@@ -61,9 +61,7 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 
 ## encoder.blocks.2.mlp.1 - Neuron Basis
 <details>
-<summary>Max activating audio samples for encoder.blocks.2.mlp.1 neurons></summary>
-   
-### Neuron 0 ('m')
+<summary>Neuron 0 ('m')</summary>
 <audio controls>
    <source src="audio/b2_mlp1_nb_0pkl_sample3.wav" type="audio/wav">
    Your browser does not support the audio element.
@@ -80,8 +78,10 @@ We found max activating dataset examples for all of the neurons in the mlp layer
    <source src="audio/b2_mlp1_nb_0pkl_sample8.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
+</details>
 
-### Neuron 1 ('sh/ch')
+<details>
+<summary>Neuron 1 ('sh/ch'))</summary>
 <audio controls>
    <source src="audio/b2_mlp1_nb_1pkl_sample1.wav" type="audio/wav">
    Your browser does not support the audio element.
@@ -98,8 +98,10 @@ We found max activating dataset examples for all of the neurons in the mlp layer
    <source src="audio/b2_mlp1_nb_1pkl_sample9.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
+</details>
 
-### Neuron 3 ('c')
+<details>
+<summary>Neuron 3 ('c')</summary>
 <audio controls>
    <source src="audio/b2_mlp1_nb_3pkl_sample4.wav" type="audio/wav">
    Your browser does not support the audio element.
