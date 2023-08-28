@@ -1,3 +1,22 @@
+# The decoder is a weak LM
+Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour. Below we present evidence of this.
+
+*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and autoregressively predicts the transcript.*
+
+## Bigrams
+If we use just padding frames as the input of the encoder and 'prompt' the decoder we can recover bigram statistics. For example,
+
+The start of the transcription is normally indicated by:
+`<|startoftranscript|><|en|><|transcribe|>`
+
+Instead we set it to be:
+`<|startoftranscript|><|en|><|transcribe|> <prompt>`
+
+Below we plot the top 20 most likely next tokens and their corresponding logit for a variety of prompts. We can see that when the model has no acoustic information it relys on learnt bigrams.
+
+
+
+
 
 # Acoustic Features
 We found max activating dataset examples for all of the neurons in the mlp layers of the encoder. We also trained sparse autoencoders on the residual stream activations and found max activating dataset examples for these learnt features. By amplifying the sound around the point where the neuron/feature is maximally active, we found them to be highly interpretable. Below are examples of some of the features we found.
@@ -242,7 +261,5 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </audio>
 </details>
 
-
-# The decoder is a weak LM
 
 # The encoder representations are very localized
