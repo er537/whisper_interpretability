@@ -1,0 +1,10 @@
+/* styles.css */
+
+.side-by-side {
+  display: inline-block;
+  margin: 0 10px;
+}
+
+.image-container {
+  text-align: center;
+}
