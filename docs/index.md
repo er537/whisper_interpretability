@@ -6,10 +6,10 @@ Whisper is trained soley on supervised speech-to-text data; the decoder is NOT p
 ## Bigrams
 If we use just padding frames as the input of the encoder and 'prompt' the decoder we can recover bigram statistics. For example,
 
-The start of the transcription is normally indicated by:
+The start of the transcription is normally indicated by:\
 `<|startoftranscript|><|en|><|transcribe|>`
 
-Instead we set it to be:
+Instead we set it to be:\
 `<|startoftranscript|><|en|><|transcribe|> <prompt>`
 
 Below we plot the top 20 most likely next tokens and their corresponding logit for a variety of prompts. We can see that when the model has no acoustic information it relys on learnt bigrams.
