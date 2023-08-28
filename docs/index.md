@@ -26,7 +26,7 @@ Bigram statistics are often learnt by the token embedding layer in transformer l
 \
 'rug' is close in embedding space to lug, mug and tug. This is not very surprising of a speech-to-text model; if you *think* you hear the word 'rug', it is quite likely that the word was in fact lug or mug.
 ![rug](decoder/embedding_space/rug_embed.png)
-Often tokens that are close in embedding space and a combination of rhyming words **and** semantically similar words:
+Often tokens that are close in embedding space are a combination of rhyming words **and** semantically similar words:
 ![UK](decoder/embedding_space/UK_embed.png)
 ![duck](decoder/embedding_space/duck_embed.png)
 ![tea](decoder/embedding_space/tea_embed.png)
@@ -256,7 +256,7 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </details>
 
 <details>
-<summary>Dictionary idx=6 ("l")</summary>
+<summary>Dictionary idx=6 ("l" (eg lost))</summary>
 <audio controls>
    <source src="audio/b2_res_6pkl_sample0.wav" type="audio/wav">
    Your browser does not support the audio element.
