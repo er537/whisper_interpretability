@@ -1,4 +1,4 @@
-theme: math-minima
+remote-theme: minimal-mistakes-jekyll
 lsi: false
 safe: true
 source: /docs
