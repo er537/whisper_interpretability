@@ -284,5 +284,6 @@ where\
 $\bar A_t = \mathbb{E}[\nabla A_t \circ A_t]$,\
 $A_{t}$ is the attention pattern in layer $t$ and $\bar A_{t}$ is the attention pattern weighted by gradient contribution. 
 This produces a striking pattern; up to the point where the audio ends, the attention pattern is very localized. When the speech ends (at frame ~500 in the following plot), all future positions attend back to the end of the speech.
-
+![attn_scores](encoder/attention_scores.png)
+![mask](encoder/attn_mask.png)
 Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the following mask the the attention scores before the softmax:
