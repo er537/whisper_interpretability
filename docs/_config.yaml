@@ -1,4 +1,4 @@
-theme: math-minima
+remote_theme: math-minima
 lsi: false
 safe: true
 source: /docs
