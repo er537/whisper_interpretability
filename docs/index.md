@@ -283,9 +283,15 @@ $$R_{t+1} = R_{t} + \bar A_{t+1} R_{t}$$,\
 where\
 $\bar A_t = \mathbb{E}[\nabla A_t \circ A_t]$,\
 $A_{t}$ is the attention pattern in layer $t$ and $\bar A_{t}$ is the attention pattern weighted by gradient contribution. 
-This produces a striking pattern; up to the point where the audio ends, the attention pattern is very localized. When the speech ends (at frame ~500 in the following plot), all future positions attend back to the end of the speech.
+This produces the striking pattern in figure a) below; up to the point where the audio ends, the attention pattern is very localized. When the speech ends (at frame ~500 in the following plot), all future positions attend back to the end of the speech.
 <div style="text-align:center;">
-<img src="encoder/attention_scores.png" alt="attn_scores" style="width:500px; height:500px;" />
-<img src="encoder/attn_mask.png" alt="attn_mask" style="width:500px; height:500px;" />
+    <figure>
+        <img src="encoder/attention_scores.png" alt="attn_scores" style="width:500px; height:500px;" />
+        <figcaption>a) Propagated Attention Scores</figcaption>
+    </figure>
+    <figure>
+        <img src="encoder/attn_mask.png" alt="attn_mask" style="width:500px; height:500px;" />
+        <figcaption>b) Attention Mask</figcaption>
+    </figure>
 </div>
-Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the following mask the the attention scores before the softmax:
+Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the mask in figure b) to the attention scores before the softmax.
