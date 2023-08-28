@@ -1,4 +1,4 @@
-remote-theme: jekyll-yamt
+remote-theme: minimal-mistakes-jekyll
 lsi: false
 safe: true
 source: /docs
