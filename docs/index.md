@@ -289,5 +289,5 @@ This produces the striking pattern below; up to the point where the audio ends, 
 </div>
 Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
 <div>
-    <img src="encoder/attn_mask.png" alt="attn_mask" style="width:500px; height:500px;" />
+    <img src="encoder/attn_mask.png" alt="attn_mask" style="width:300px; height:300px;" />
 </div>
