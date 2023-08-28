@@ -1,5 +1,5 @@
 # The decoder is a weak LM
-Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour. Below we present evidence of this.
+Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour.
 
 *For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and autoregressively predicts the transcript.*
 
@@ -13,6 +13,8 @@ Instead we set it to be:
 `<|startoftranscript|><|en|><|transcribe|> <prompt>`
 
 Below we plot the top 20 most likely next tokens and their corresponding logit for a variety of prompts. We can see that when the model has no acoustic information it relys on learnt bigrams.
+
+![Good](decoder/prompt_images/Good_prompt.png)
 
 
 
