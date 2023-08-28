@@ -1,4 +1,6 @@
-# The decoder is a weak LM
+# Macroscopic Properties of the Decoder
+
+## The decoder is a weak LM
 Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour.
 
 *For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and autoregressively predicts the transcript.*
@@ -22,7 +24,7 @@ Below we plot the top 20 most likely next tokens and their corresponding logit f
 
 Bigram statistics are often learnt by the token embedding layer in transformer language models. Additionally, we observe semantically similar words clustered in embedding space. This phenomenon holds for Whisper model, but additionally we discover that words with **similar sounds** also exhibit proximity in the embedding space. To illustrate this, we choose specific words and then create a plot of the 20 nearest tokens based on their cosine similarity.\
 \
-'rug' is close in embedding space to lug, mug and tug. This is not very surprising of a speech-to-text model; if you *think* you hear the word 'rug', it is quite likely that the speech was in fact lug or mug.
+'rug' is close in embedding space to lug, mug and tug. This is not very surprising of a speech-to-text model; if you *think* you hear the word 'rug', it is quite likely that the word was in fact lug or mug.
 ![rug](decoder/embedding_space/rug_embed.png)
 Often tokens that are close in embedding space and a combination of rhyming words **and** semantically similar words:
 ![UK](decoder/embedding_space/UK_embed.png)
@@ -273,5 +275,4 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </audio>
 </details>
 
-
-# The encoder representations are very localized
+# Macroscopic Properties of the Encoder
