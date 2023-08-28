@@ -279,7 +279,7 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 
 ## Attention patterns are very localized
 We propagate the attention scores $R_{t}$ down the layers of the encoder as in [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers](https://arxiv.org/pdf/2103.15679.pdf). This roughly equates to,\
-$R_{t+1} = R_{t} + \bar A_{t+1} R_{t}$,\
+$$R_{t+1} = R_{t} + \bar A_{t+1} R_{t}$$,\
 where\
 $\bar A_t = \mathbb{E}[\nabla A_t \circ A_t]$,\
 $A_{t}$ is the attention pattern in layer $t$ and $\bar A_{t}$ is the attention pattern weighted by gradient contribution. 
