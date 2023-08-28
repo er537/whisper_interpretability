@@ -18,14 +18,15 @@ Below we plot the top 20 most likely next tokens and their corresponding logit f
 ![traffic](decoder/prompt_images/traffic.png)
 ![Good](decoder/prompt_images/Good_prompt.png)
 
-![duck](decoder/embedding_space/duck_embed.png)
+## Embedding space
+
+Bigram statistics are often learnt by the token embedding layer in transformer language models. Additionally, semantically similar words are often clustered in embedding space. We find this to be true of Whisper, but in addition to the Bigram statistics and semantic clustering, we find that words that **sound** the same are also close by in embedding space. Below we select a few words then plot the 20 nearest (highest cosine similarity) tokens.
+'rug' is close in embedding space to lug, mug and tug. This is not very surprising of a speech-to-text model; if you *think* you hear the word 'rug', it is quite likely that the speech was in fact lug or mug.
 ![rug](decoder/embedding_space/rug_embed.png)
-![stay](decoder/embedding_space/stay_embed.png)
-![tea](decoder/embedding_space/tea_embed.png)
+Often tokens that are close in embedding space and a combination of rhyming words **and** semantically similar words:
 ![UK](decoder/embedding_space/UK_embed.png)
-
-
-
+![duck](decoder/embedding_space/duck_embed.png)
+![tea](decoder/embedding_space/tea_embed.png)
 
 
 # Acoustic Features
