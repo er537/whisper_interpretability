@@ -329,16 +329,17 @@ Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends
 Consider the following example in which we substitute the initial 50 audio embeddings with padded equivalents (e.g., start_index=0, stop_index=50). These 50 embeddings represent $(50/1500)*30s=1s$ of audio. Our observation reveals that the transcript resulting from this replacement omits the initial two words.
 
 ##### Original:
-'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'  
+`hot ones. The show where celebrities answer hot questions while feeding even hotter wings.`  
 ##### start_index=0, stop_index=50:    
-"The show where celebrities answer hot questions while feeding even hotter wings.'  
+`The show where celebrities answer hot questions while feeding even hotter wings.`   
+
 
 
 
 We can also do this in the middle of the sequence. Here we let (start_index=150, stop_index=175) which corresponds to 3-3.5s in the audio and observe that the transcipt omits the words `hot questions`:  
 
 ##### Original:   
-'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'  
+`hot ones. The show where celebrities answer hot questions while feeding even hotter wings.`  
 ##### start_index=150, stop_index=175:  
-"hot ones. The show where celebrities while feeding even hotter wings."  
+`hot ones. The show where celebrities while feeding even hotter wings.`  
 
