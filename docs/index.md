@@ -324,10 +324,10 @@ Here are the transcripts that emerge as we limit the attention window for variou
 ## Removing words in embedding space
 Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends to the output of the final layer of the encoder. Given the apparent localization of the embeddings in this final layer, we postulate that we could remove words from the transcript by 'chopping' them out in embedding space. Concretely we let,
 
-`audio_embeds[start_index:stop_index] = padded_embeds[start_index:stop_index]`,
+`final_layer_output[start_index:stop_index] = final_layer_output_for_padded_input[start_index:stop_index]`,
 
 
- where `padded_embeds` are the output from the final layer of the encoder when we just use padding frames as the input.
+ where `final_layer_output_for_padded_input` is the output of the encoder when we just use padding frames as the input.
 
 Consider the following example in which we substitute the initial 50 audio embeddings with padded equivalents (e.g., start_index=0, stop_index=50). These 50 embeddings represent $(50/1500)*30s=1s$ of audio. Our observation reveals that the transcript resulting from this replacement omits the initial two words.
 
