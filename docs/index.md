@@ -3,7 +3,7 @@
 ## The decoder is a weak LM
 Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour.
 
-*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and autoregressively predicts the transcript.*
+*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and the ouput from the decoder is a transcript, predicted autoregressively.*
 
 ## Bigrams
 If we use just padding frames as the input of the encoder and 'prompt' the decoder we can recover bigram statistics. For example,
