@@ -293,14 +293,19 @@ Given how localized the attention pattern is, we investigate what happens if we 
 </div>
 
 We demonstrate below that we can localize the attention as low as k=100 with no degradation to the resulting transcript, and even k=50 results in a fairly accurate transcript.\
+\
 Original transcript (seq_len=1500):\
 'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'\
+\
 k=100:\
 "Hot ones. The show where celebrities answer hot questions, what feeding, eating hot wings. I am Shana Evans. I'm Join Today."\
+\
 k=75:\
 "The show with celebrities and their hot questions, what feeding, eating hot wings. Hi, I'm Shannon, and I'm joined today."\
+\
 k=50:\
 'The show where celebrities enter hot questions, what leading, what leading, what are we.'\
+\
 k=20:\
 "I'm joined today."\
 k=10:\
