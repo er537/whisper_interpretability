@@ -287,6 +287,8 @@ This produces the striking pattern below; up to the point where the audio ends, 
 <div style="text-align:center;">
     <img src="encoder/attention_scores.png" alt="attn_scores" style="width:600px; height:500px;" />
 </div>
+
+## Constraining the attention window
 Given how localized the attention pattern appears to be, we investigate what happens if we constrain it so that every audio embedding can only attend to the k nearest tokens on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
 <div>
     <img src="encoder/attn_mask.png" alt="attn_mask" style="width:300px; height:300px;" />
@@ -319,13 +321,14 @@ Here are the transcripts that emerge as we limit the attention window for variou
 ##### k=10:  
 ""
 
+## Removing words in embedding space
 Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends to the output of the final layer of the encoder. Given the apparent localization of the embeddings in this final layer, we postulate that we could remove words from the transcript by 'chopping' them out in embedding space. Concretely we let,
 
 `audio_embeds[start_index:stop_index] = padded_embeds[start_index:stop_index]`,
 
 
  where `padded_embeds` are the output from the final layer of the encoder when we just use padding frames as the input.
- 
+
 Consider the following example in which we substitute the initial 50 audio embeddings with padded equivalents (e.g., start_index=0, stop_index=50). These 50 embeddings represent $(50/1500)*30s=1s$ of audio. Our observation reveals that the transcript resulting from this replacement omits the initial two words.
 
 ##### Original:
