@@ -3,7 +3,7 @@
 ## The decoder is a weak LM
 Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour.
 
-*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and autoregressively predicts the transcript.*
+*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and the ouput from the decoder is a transcript, predicted autoregressively.*
 
 ## Bigrams
 If we use just padding frames as the input of the encoder and 'prompt' the decoder we can recover bigram statistics. For example,
@@ -278,16 +278,71 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 # Macroscopic Properties of the Encoder
 
 ## Attention patterns are very localized
-We propagate the attention scores $R_{t}$ down the layers of the encoder as in [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers](https://arxiv.org/pdf/2103.15679.pdf). This roughly equates to,\
+We propagate the attention scores $R_{t}$ down the layers of the encoder as in [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers](https://arxiv.org/pdf/2103.15679.pdf). This roughly equates to,  
 $$R_{t+1} = R_{t} + \bar A_{t+1} R_{t},$$
-where\
+where  
 $$\bar A_t = \mathbb{E}[\nabla A_t \circ A_t],$$
 $A_{t}$ is the attention pattern in layer $t$ and $\bar A_{t}$ is the attention pattern weighted by gradient contribution. 
 This produces the striking pattern below; up to the point where the audio ends, the attention pattern is very localized. When the speech ends (at frame ~500 in the following plot), all future positions attend back to the end of the speech.
 <div style="text-align:center;">
-    <img src="encoder/attention_scores.png" alt="attn_scores" style="width:500px; height:500px;" />
+    <img src="encoder/attention_scores.png" alt="attn_scores" style="width:600px; height:500px;" />
 </div>
-Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
+
+## Constraining the attention window
+Given how localized the attention pattern appears to be, we investigate what happens if we constrain it so that every audio embedding can only attend to the k nearest tokens on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
 <div>
     <img src="encoder/attn_mask.png" alt="attn_mask" style="width:300px; height:300px;" />
 </div>
+
+Here are the transcripts that emerge as we limit the attention window for various k values. We observe that even when k is reduced to 75, the model continues to generate reasonably precise transcripts, indicating that information is being encoded in a localized manner.
+
+
+
+##### Original transcript (seq_len=1500):  
+'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.' 
+
+
+##### k=100:  
+"Hot ones. The show where celebrities answer hot questions, what feeding, eating hot wings. I am Shana Evans. I'm Join Today." 
+
+
+##### k=75:  
+"The show with celebrities and their hot questions, what feeding, eating hot wings. Hi, I'm Shannon, and I'm joined today." 
+
+
+##### k=50:  
+'The show where celebrities enter hot questions, what leading, what leading, what are we.' 
+
+
+##### k=20:  
+"I'm joined today."
+
+
+##### k=10:  
+""
+
+## Removing words in embedding space
+Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends to the output of the final layer of the encoder. Given the apparent localization of the embeddings in this final layer, we postulate that we could remove words from the transcript by 'chopping' them out in embedding space. Concretely we let,
+
+`final_layer_output[start_index:stop_index] = final_layer_output_for_padded_input[start_index:stop_index]`,
+
+
+ where `final_layer_output_for_padded_input` is the output of the encoder when we just use padding frames as the input.
+
+Consider the following example in which we substitute the initial 50 audio embeddings with padded equivalents (e.g., start_index=0, stop_index=50). These 50 embeddings represent $(50/1500)*30s=1s$ of audio. Our observation reveals that the transcript resulting from this replacement omits the initial two words.
+
+##### Original:
+`hot ones. The show where celebrities answer hot questions while feeding even hotter wings.`  
+##### start_index=0, stop_index=50:    
+`The show where celebrities answer hot questions while feeding even hotter wings.`   
+
+
+
+
+We can also do this in the middle of the sequence. Here we let (start_index=150, stop_index=175) which corresponds to 3-3.5s in the audio and observe that the transcipt omits the words `hot questions`:  
+
+##### Original:   
+`hot ones. The show where celebrities answer hot questions while feeding even hotter wings.`  
+##### start_index=150, stop_index=175:  
+`hot ones. The show where celebrities while feeding even hotter wings.`  
+
