@@ -1,7 +1,7 @@
 # Macroscopic Properties of the Decoder
 
 ## The decoder is a weak LM
-Whisper is trained soley on supervised speech-to-text data; the decoder is NOT pretrained on text. Despite this, we find that it learns weak langauge modelling behaviour.
+Whisper is trained exclusively on supervised speech-to-text data; the decoder is **not** pre-trained on text. In spite of this, the model still acquires rudimentary language modeling capabilities. While this outcome isn't unexpected, the subsequent experiments that validate this phenomenon are quite interesting in themselves.
 
 *For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and the ouput from the decoder is a transcript, predicted autoregressively.*
 
