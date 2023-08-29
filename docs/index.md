@@ -287,27 +287,50 @@ This produces the striking pattern below; up to the point where the audio ends, 
 <div style="text-align:center;">
     <img src="encoder/attention_scores.png" alt="attn_scores" style="width:600px; height:500px;" />
 </div>
-Given how localized the attention pattern is, we investigate what happens if we constrain it so that every audio embedding can only attent to the k nearest token on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
+Given how localized the attention pattern appears to be, we investigate what happens if we constrain it so that every audio embedding can only attend to the k nearest tokens on either side. Eg if k=2 we would we apply the following mask to the attention scores before the softmax:
 <div>
     <img src="encoder/attn_mask.png" alt="attn_mask" style="width:300px; height:300px;" />
 </div>
 
-We demonstrate below that we can localize the attention as low as k=100 with no degradation to the resulting transcript, and even k=50 results in a fairly accurate transcript.\
+Here are the transcripts that emerge as we limit the attention window for various k values. We observe that even when k is reduced to 75, the model continues to generate reasonably precise transcripts, indicating that information is being encoded in a localized manner.\
 \
-Original transcript (seq_len=1500):\
+##### Original transcript (seq_len=1500):\
 'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'\
 \
-k=100:\
+##### k=100:\
 "Hot ones. The show where celebrities answer hot questions, what feeding, eating hot wings. I am Shana Evans. I'm Join Today."\
 \
-k=75:\
+##### k=75:\
 "The show with celebrities and their hot questions, what feeding, eating hot wings. Hi, I'm Shannon, and I'm joined today."\
 \
-k=50:\
+##### k=50:\
 'The show where celebrities enter hot questions, what leading, what leading, what are we.'\
 \
-k=20:\
+##### k=20:\
 "I'm joined today."\
 \
-k=10:\
+##### k=10:\
 ""
+
+Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends to the output of the final layer of the encoder. Given the apparent localization of the embeddings in this final layer, we postulate that we could remove words from the transcript by 'chopping' them out in embedding space. Concretely we let,\
+
+`audio_embeds[start_index:stop_index] = padded_embeds[start_index:stop_index]`,\
+\
+ where `padded_embeds` are the output from the final layer of the encoder when we just use padding frames as the input.\
+ 
+Consider the following example in which we substitute the initial 50 audio embeddings with padded equivalents (e.g., start_index=0, stop_index=50). These 50 embeddings represent $(50/1500)*30s=1s$ of audio. Our observation reveals that the transcript resulting from this replacement omits the initial two words.\
+\
+##### Original\
+'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'\
+\
+##### start_index=0, stop_index=50\
+"The show where celebrities answer hot questions while feeding even hotter wings.' \
+
+We can also do this in the middle of the sequence. Here we let (start_index=150, stop_index=175) which corresponds to 3-3.5s in the audio and observe that the transcipt omits the words `hot questions`: \
+\
+##### Original\
+'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.'\
+\
+##### start_index=150, stop_index=175\
+"hot ones. The show where celebrities while feeding even hotter wings." \
+
