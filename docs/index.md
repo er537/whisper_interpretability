@@ -334,7 +334,7 @@ Consider the following example in which we substitute the initial 50 audio embed
 <details>
 <summary>Audio Sample</summary>
 <audio controls>
-   <source src="audio/encoder/Hot_ones.wav" type="audio/wav">
+   <source src="encoder/Hot_ones.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
 </details>
