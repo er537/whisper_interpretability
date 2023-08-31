@@ -276,7 +276,12 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </details>
 
 # Polysemantic acoustic neurons
-It is commonly understood that both language and image models contain polysemantic neurons. We confirm the existence of polysemic acoustic neurons which activate for distinct sounds across various levels of activation.
+It is commonly understood that both language and image models contain polysemantic neurons. The following plots confirm the existence of polysemic acoustic neurons activating for distinct sounds across various levels of activation.
+
+<div style="display: flex; justify-content: center;">
+    <img src="encoder/Polysemantic_c_g.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
+    <img src="encoder/poly_sh_ch.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
+</div>
 
 # Macroscopic Properties of the Encoder
 
