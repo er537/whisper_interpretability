@@ -280,10 +280,10 @@ It is commonly understood that both language and image models contain polysemant
 
 <div style="display: flex; justify-content: center;">
     <figure>
-        <img src="encoder/Polysemantic_c_g.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
+        <img src="encoder/poly_ch_sh.png" alt="poly_ch_sh" style="max-width: 50%; height: auto;" />
     </figure>
     <figure>
-        <img src="encoder/poly_sh_ch.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
+        <img src="encoder/poly_c_g.png" alt="poly_c_g" style="max-width: 50%; height: auto;" />
     </figure>
     <figcaption>Plots showing the number of activations matching a sound for different activation ranges</figcaption>
 </div>
