@@ -285,18 +285,6 @@ It is commonly understood that both language and image models contain polysemant
 
 
 ## Audio samples for polysemantic neurons
-<details>
-<summary>Neuron 3 ('c/g')</summary>
-<audio controls>
-   <source src="audio/b2_mlp_1_1pkl_poly_c.wav" type="audio/wav">
-   Your browser does not support the audio element.
-</audio>
-<audio controls>
-   <source src="audio/b2_mlp_1_1pkl_poly_g.wav" type="audio/wav">
-   Your browser does not support the audio element.
-</audio>
-</details>
-
 
 <details>
 <summary>Neuron 1 ('sh/ch/j')</summary>
@@ -310,6 +298,18 @@ It is commonly understood that both language and image models contain polysemant
 </audio>
 <audio controls>
    <source src="audio/b2_mlp_1_1pkl_poly_j.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Neuron 3 ('c/g')</summary>
+<audio controls>
+   <source src="audio/b2_mlp_1_3pkl_poly_c.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b2_mlp_1_3pkl_poly_g.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
 </details>
