@@ -338,27 +338,27 @@ Here are the transcripts that emerge as we limit the attention window for variou
 
 
 ##### Original transcript (seq_len=1500):  
-'hot ones. The show where celebrities answer hot questions while feeding even hotter wings.' 
+`hot ones. The show where celebrities answer hot questions while feeding even hotter wings.` 
 
 
 ##### k=100:  
-"Hot ones. The show where celebrities answer hot questions, what feeding, eating hot wings. I am Shana Evans. I'm Join Today." 
+`Hot ones. The show where celebrities answer hot questions, what feeding, eating hot wings. I am Shana Evans. I'm Join Today.` 
 
 
 ##### k=75:  
-"The show with celebrities and their hot questions, what feeding, eating hot wings. Hi, I'm Shannon, and I'm joined today." 
+`The show with celebrities and their hot questions, what feeding, eating hot wings. Hi, I'm Shannon, and I'm joined today.`  
 
 
 ##### k=50:  
-'The show where celebrities enter hot questions, what leading, what leading, what are we.' 
+`The show where celebrities enter hot questions, what leading, what leading, what are we.` 
 
 
 ##### k=20:  
-"I'm joined today."
+`I'm joined today.`
 
 
 ##### k=10:  
-""
+` `
 
 ## Removing words in embedding space
 Recall that Whisper is an encoder-decoder transformer; the decoder cross-attends to the output of the final layer of the encoder. Given the apparent localization of the embeddings in this final layer, we postulate that we could remove words from the transcript by 'chopping' them out in embedding space. Concretely we let,
