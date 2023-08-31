@@ -280,7 +280,7 @@ It is commonly understood that both language and image models contain polysemant
 
 <div style="display: flex; justify-content: center;">
     <img src="encoder/poly_sh_ch.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
-    <img src="encoder/poly_c_g.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
+    <img src="encoder/poly_ch_sh.png" alt="attn_scores" style="max-width: 50%; height: auto;" />
 </div>
 
 # Macroscopic Properties of the Encoder
