@@ -276,31 +276,14 @@ We found max activating dataset examples for all of the neurons in the mlp layer
 </details>
 
 # Polysemantic acoustic neurons
-It is commonly understood that both language and image models contain polysemantic neurons. The following plots confirm the existence of polysemic acoustic neurons activating for distinct sounds across various levels of activation.
-
-<div style="display: flex; flex-direction: column; align-items: center;">
-    <figure style="margin-bottom: 20px;">
-        <img src="encoder/poly_ch_sh.png" alt="poly_ch_sh" style="max-width: 50%; height: auto;" />
-    </figure>
-    <figure style="margin-bottom: 20px;">
-        <img src="encoder/poly_c_g.png" alt="poly_c_g" style="max-width: 50%; height: auto;" />
-    </figure>
-    <figcaption>Plots showing the number of activations matching a sound for different activation ranges</figcaption>
+The presence of polysemantic neurons in both language and image models is widely acknowledged, suggesting the possibility of their existence in acoustic models as well. Our findings validate the presence of these polysemantic acoustic neurons, which respond to different sounds at various activation levels. Presented in the following visualizations are two such polysemantic neurons alongside the sounds that trigger their activation. Additionally, audio samples are provided to illustrate this phenomenon.
+<div style="display: flex; justify-content: center;">
+    <img src="encoder/poly_ch_sh.png" alt="poly_ch_sh" style="max-width: 50%; height: auto;" />
+    <img src="encoder/poly_c_g.png" alt="poly_c_g" style="max-width: 50%; height: auto;" />
 </div>
 
-## Audio samples for polysemantic neurons
-<details>
-<summary>Neuron 3 ('c/g')</summary>
-<audio controls>
-   <source src="audio/b2_mlp_1_1pkl_poly_c.wav" type="audio/wav">
-   Your browser does not support the audio element.
-</audio>
-<audio controls>
-   <source src="audio/b2_mlp_1_1pkl_poly_g.wav" type="audio/wav">
-   Your browser does not support the audio element.
-</audio>
-</details>
 
+## Audio samples for polysemantic neurons
 
 <details>
 <summary>Neuron 1 ('sh/ch/j')</summary>
@@ -314,6 +297,18 @@ It is commonly understood that both language and image models contain polysemant
 </audio>
 <audio controls>
    <source src="audio/b2_mlp_1_1pkl_poly_j.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+</details>
+
+<details>
+<summary>Neuron 3 ('c/g')</summary>
+<audio controls>
+   <source src="audio/b2_mlp_1_3pkl_poly_c.wav" type="audio/wav">
+   Your browser does not support the audio element.
+</audio>
+<audio controls>
+   <source src="audio/b2_mlp_1_3pkl_poly_g.wav" type="audio/wav">
    Your browser does not support the audio element.
 </audio>
 </details>
