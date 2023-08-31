@@ -287,6 +287,7 @@ It is commonly understood that both language and image models contain polysemant
     </figure>
     <figcaption>Plots showing the number of activations matching a sound for different activation ranges</figcaption>
 </div>
+
 # Macroscopic Properties of the Encoder
 
 ## Attention patterns are very localized
