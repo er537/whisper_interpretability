@@ -69,42 +69,12 @@ Consider the following example in which we substitute the initial 50 audio embed
 
 
 
-
 We can also do this in the middle of the sequence. Here we let (start_index=150, stop_index=175) which corresponds to 3-3.5s in the audio and observe that the transcipt omits the words `hot questions`:  
 
 ##### Original:   
 `hot ones. The show where celebrities answer hot questions while feeding even hotter wings.`  
 ##### Substitute embeddings between (start_index=150, stop_index=175):  
 `hot ones. The show where celebrities while feeding even hotter wings.`  
-
-## Claim 1: The decoder is a weak LM
-Whisper is trained exclusively on supervised speech-to-text data; the decoder is **not** pre-trained on text. In spite of this, the model still acquires rudimentary language modeling capabilities. While this outcome isn't unexpected, the subsequent experiments that validate this phenomenon are quite interesting in themselves.
-
-*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and the ouput from the decoder is a transcript, predicted autoregressively.*
-
-## Bigrams
-If we use just 'padding' frames as the input of the encoder but 'prompt' the decoder we recover bigram statistics. For example,
-
-The start of the transcription is normally indicated by:\
-`<|startoftranscript|><|en|><|transcribe|>`
-
-Instead we set it to be:\
-`<|startoftranscript|><|en|><|transcribe|> <prompt>`
-
-Below we plot the top 20 most likely next tokens and their corresponding logit for the prompts 'very' and 'traffic'. We can see that even when the model is given no acoustic information it predicts likely completions such as 'traffic... lights/jam/police' demonstrating that the decoder has learnt bigram statistics.
-
-![very](decoder/prompt_images/very_prompt.png)
-![traffic](decoder/prompt_images/traffic.png)
-![Good](decoder/prompt_images/Good_prompt.png)
-
-## Embedding space
-
-In language models, we often observe that semantically similar words are clustered in embedding space. This phenomenon holds for Whisper, but additionally we discover that *similar sounding* words also clustered in embedding space. Intuitively this makes sense, if the speech-to-text model *thinks* that the next word is `rug`, it is likely that it misheard and the word was actually `tug` of `mug`. To illustrate this, below we choose a specific word then plot the 20 nearest token embeddings based on their cosine similarity. The resulting plots show that the nearest token embeddings are often a combination of semantically similar **and** similar sounding words.
-
-
-![rug](decoder/embedding_space/rug_embed.png)
-![UK](decoder/embedding_space/UK_embed.png)
-
 
 
 # Claim 2: Acoustic features are highly interpretable
@@ -387,6 +357,34 @@ The presence of polysemantic neurons in both language and image models is widely
    Your browser does not support the audio element.
 </audio>
 </details>
+
+# Claim 3: The decoder is a weak LM
+Whisper is trained exclusively on supervised speech-to-text data; the decoder is **not** pre-trained on text. In spite of this, the model still acquires rudimentary language modeling capabilities. While this outcome isn't unexpected, the subsequent experiments that validate this phenomenon are quite interesting in themselves.
+
+*For context: Whisper is an encoder-decoder transformer model. The input to the encoder is a 30s chunk of audio (shorter chunks can be padded) and the ouput from the decoder is a transcript, predicted autoregressively.*
+
+## Bigrams
+If we use just 'padding' frames as the input of the encoder but 'prompt' the decoder we recover bigram statistics. For example,
+
+The start of the transcription is normally indicated by:\
+`<|startoftranscript|><|en|><|transcribe|>`
+
+Instead we set it to be:\
+`<|startoftranscript|><|en|><|transcribe|> <prompt>`
+
+Below we plot the top 20 most likely next tokens and their corresponding logit for the prompts 'very' and 'traffic'. We can see that even when the model is given no acoustic information it predicts likely completions such as 'traffic... lights/jam/police' demonstrating that the decoder has learnt bigram statistics.
+
+![very](decoder/prompt_images/very_prompt.png)
+![traffic](decoder/prompt_images/traffic.png)
+![Good](decoder/prompt_images/Good_prompt.png)
+
+## Embedding space
+
+In language models, we often observe that semantically similar words are clustered in embedding space. This phenomenon holds for Whisper, but additionally we discover that *similar sounding* words also clustered in embedding space. Intuitively this makes sense, if the speech-to-text model *thinks* that the next word is `rug`, it is likely that it misheard and the word was actually `tug` of `mug`. To illustrate this, below we choose a specific word then plot the 20 nearest token embeddings based on their cosine similarity. The resulting plots show that the nearest token embeddings are often a combination of semantically similar **and** similar sounding words.
+
+
+![rug](decoder/embedding_space/rug_embed.png)
+![UK](decoder/embedding_space/UK_embed.png)
 
 
 
