@@ -12,7 +12,7 @@ from global_utils import device
 from global_whisper_utils import load_audio, trim_audio
 from jaxtyping import Float
 from sparse_coding.local_utils import get_features
-from sparse_coding.test.max_activating_fragments import MaxActivatingFragments
+from whisper_interpretability.sparse_coding.test.max_activating_segments import MaxActivatingFragments
 from torch import Tensor
 
 MIN_MEL_AMP = -1.0
