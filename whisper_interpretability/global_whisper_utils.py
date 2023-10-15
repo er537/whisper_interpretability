@@ -221,13 +221,17 @@ class WhisperMelsDataset(torch.utils.data.Dataset):
 
 
 class LibriSpeechDataset(torch.utils.data.Dataset):
-    def __init__(self, root="/exp/ellenar/LibriSpeech", url="train-other-500", return_mels=True):
+    def __init__(self, root="/exp/ellenar/LibriSpeech", url="dev-clean", return_mels=False):
         super().__init__()
+        if not os.path.exists(f"{root}/LibriSpeech/{url}"):
+            download = True
+        else:
+            download = False
         try:
-            self.dataset = torchaudio.datasets.LIBRISPEECH(download=False, url=url, root=root)
+            self.dataset = torchaudio.datasets.LIBRISPEECH(download=download, url=url, root=root)
         except RuntimeError:
             print("Downloading dataset")
-            self.dataset = torchaudio.datasets.LIBRISPEECH(download=True, url=url, root=root)
+            self.dataset = torchaudio.datasets.LIBRISPEECH(download=download, url=url, root=root)
         self.root = root
         self.return_mels = return_mels
 

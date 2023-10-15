@@ -5,12 +5,13 @@ from global_utils import device
 
 
 def get_features(
-    feature_type: str = "learnt", chk_path: Optional[str] = None, feature_idx: int = None
+    feature_type: str = "learnt", chk_path: Optional[str] = None, feature_idx: int = None, d_model: int = 1536
 ):
     """
     Inputs:
     feature_type: "learnt", "neuron_basis" or "rand_orth"
     chk_path: path to autoencoder checkpoint for learnt features
+    d_model:
 
     Returns: 'features' learnt by autoencoder, neuron basis or a random orthogonal basis
     """
@@ -19,13 +20,13 @@ def get_features(
     if feature_type == "learnt":
         encoder_bias = chk["model"]["encoder_bias"]
     elif feature_type == "neuron_basis":
-        encoder_weight = torch.eye(1536, 1536)
-        encoder_bias = torch.zeros(1536)
+        encoder_weight = torch.eye(d_model, d_model)
+        encoder_bias = torch.zeros(d_model)
     elif feature_type == "rand_orth":
         encoder_weight = torch.nn.init.orthogonal_(
-            torch.empty(encoder_weight.shape[0], encoder_weight.shape[0])
+            torch.empty(d_model, d_model)
         )
-        encoder_bias = torch.zeros(encoder_weight.shape[0])
+        encoder_bias = torch.zeros(d_model)
     else:
         raise Exception("type must be 'learnt', 'neuron_basis' or 'rand_orth'")
     if feature_idx is not None:

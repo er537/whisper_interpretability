@@ -637,17 +637,16 @@ class DecodingTask:
 
                 # expand the tokens tensor with the selected next tokens
                 tokens, completed = self.decoder.update(tokens, logits, sum_logprobs)
-                # print(tokens)
-                # if i == 1:
+                # vals, idxs = torch.topk(logits, k=20, dim=-1)
+                # if i == 0:
                 #     tokens = torch.cat(
-                #         (tokens, torch.tensor([[47304]], device="cuda:0")), dim=1
+                #         (tokens, torch.tensor([[6419]], device=tokens.device)), dim=1
                 #     )
-                # if i == 2:
-                #     logits_softmax = torch.softmax(logits, dim=-1)
-                #     print(torch.topk(logits_softmax, k=5))
-
-                if completed or tokens.shape[-1] > self.n_ctx:
-                    break
+                # if i > 1:
+                #     break
+                # print("topk", idxs, vals)
+                # if completed or tokens.shape[-1] > self.n_ctx:
+                #     break
         finally:
             self.inference.cleanup_caching()
 

@@ -59,8 +59,9 @@ def collate_fn(batch):
 class ActivationDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/train/decoder.blocks.3_actvs/train.dbl",
+        dbl_path: str = "/exp/ellenar/sparse_coding/whisper_activations_tiny/val/decoder.blocks.3_actvs/val.dbl",
         rebuild_sql: bool = False,
+        rank: int = 0,  # only build sql on rank 0
     ):
         """
         Takes a file (dbl) containing a list of file paths to saved out activations,
@@ -69,8 +70,10 @@ class ActivationDataset(torch.utils.data.Dataset):
         super().__init__()
         self.sql_path = f"{dbl_path.strip('.dbl')}.sql"
         if not os.path.exists(self.sql_path) or rebuild_sql:
-            raise ValueError(f"SQL file {self.sql_path} does not exist")
-            self._build_sql(dbl_path)
+            if rank == 0:
+                self._build_sql(dbl_path)
+        if torch.distributed.is_initialized():
+            torch.distributed.barrier()
         self.conn = sqlite.connect(self.sql_path)
 
     def _build_sql(self, dbl_path):

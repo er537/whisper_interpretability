@@ -4,22 +4,22 @@ set -euo pipefail
 WORK_ROOT=
 WORK_DIR=
 
-JOB_QUEUE="aml-gpu.q@b10"
+JOB_QUEUE="aml-gpu.q@b3"
 JOB_NAME=
 JOB_REASON=
 experiment_suffix=
 
 #Training hyperparameters
-activation_layer=encoder.blocks.3
-train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/train/${activation_layer}/train.dbl
-val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny/val/${activation_layer}/val.dbl
-n_dict_components=400
+activation_layer=encoder.blocks.1
+train_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_am/train/${activation_layer}/train.dbl
+val_data=/exp/ellenar/sparse_coding/whisper_activations_tiny_am/val/${activation_layer}/val.dbl
+n_dict_components=200
 recon_alpha=1e4
 lr=4e-4
-batch_size=100
+batch_size=50
 n_gpus_per_node=1
 steps=20000
-grad_acc_steps=1
+grad_acc_steps=2
 
 #Logging
 log_every=10

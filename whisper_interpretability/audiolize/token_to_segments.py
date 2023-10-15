@@ -92,7 +92,8 @@ def get_max_activating_fragments(
 
     hook.remove()
     save_max_activating_fragments(
-        max_activating_fragments, f"{out_path}/{layer_name}_{max_num_samples}/{feature_type}"
+        max_activating_fragments,
+        f"{out_path}/{layer_name}_{max_num_samples}/{feature_type}200_{k}examples",
     )
 
 
@@ -105,6 +106,7 @@ def maybe_add_feature_to_max_activating_fragments(
     encoder_weight,
     encoder_bias,
     audio_chunk_size,
+    neurons_to_consider=[i for i in range(100)],
 ):
     batch_feature_activations = nn.ReLU()(
         (actvs.to(device).float() @ encoder_weight) + encoder_bias
@@ -119,6 +121,8 @@ def maybe_add_feature_to_max_activating_fragments(
         ]  # only consider the first 5 tokens to remove effect of hallucinations
         text = tokenizer.decode(tokens)
         for feature_idx in range(batch_feature_activations.shape[-1]):
+            if feature_idx not in neurons_to_consider:
+                continue
             # for every feature_activation,
             # maybe add it to the list of max activating fragments
             feature_activation_scores = batch_feature_activations[i, :, feature_idx]
